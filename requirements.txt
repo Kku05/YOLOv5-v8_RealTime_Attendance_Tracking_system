@@ -1,0 +1,10 @@
+Flask
+opencv-python
+ultralytics
+dlib
+face-recognition
+numpy
+scikit-learn
+scipy
+mediapipe==0.10.14
+setuptools<80

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Attendance System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Arial', sans-serif;
+            color: #fff;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+        }
+
+        /* Animated Background Circles */
+        .background-animation {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            animation: move 20s infinite ease-in-out;
+        }
+
+        .circle:nth-child(1) {
+            width: 150px;
+            height: 150px;
+            top: 10%;
+            left: 20%;
+            animation-duration: 15s;
+        }
+
+        .circle:nth-child(2) {
+            width: 200px;
+            height: 200px;
+            top: 50%;
+            left: 70%;
+            animation-duration: 18s;
+        }
+
+        .circle:nth-child(3) {
+            width: 100px;
+            height: 100px;
+            top: 80%;
+            left: 30%;
+            animation-duration: 12s;
+        }
+
+        @keyframes move {
+            0% {
+                transform: translateY(0) translateX(0);
+            }
+            50% {
+                transform: translateY(-50px) translateX(50px);
+            }
+            100% {
+                transform: translateY(0) translateX(0);
+            }
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            color: #000;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            padding: 40px; /* Increased padding */
+            max-width: 900px; /* Increased width */
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+        }
+
+        .container:hover .info-hover {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .info-hover {
+            position: absolute;
+            top: 50%;
+            right: -200px; /* Initially hidden */
+            transform: translateY(-50%) translateX(50px);
+            background: rgba(30, 60, 114, 0.9);
+            color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transition: all 0.3s ease;
+            width: 200px;
+        }
+
+        img {
+            width: 300px; /* Increased size */
+            height: auto;
+            border-radius: 10px;
+        }
+
+        .btn-group-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 10px; /* Add spacing between buttons */
+        }
+
+        .btn-primary {
+            background-color: #1e3c72;
+            border: none;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: #2a5298;
+            transform: scale(1.05);
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            border: none;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+            transform: scale(1.05);
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            border: none;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+            transform: scale(1.05);
+        }
+
+        .display-4 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1e3c72;
+        }
+
+        .lead {
+            font-size: 1.2rem;
+            font-weight: 400;
+            color: #555;
+            margin-bottom: 20px;
+        }
+
+        .tooltip-inner {
+            background-color: #1e3c72;
+            color: #fff;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Animation -->
+    <div class="background-animation">
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+    </div>
+
+    <div class="container d-flex align-items-center">
+        <div class="me-4">
+            <img src="/static/home.png" alt="Home Image">
+        </div>
+        <div>
+            <h1 class="display-4">Welcome, {{ username }}!</h1>
+            <p class="lead">Effortlessly manage your attendance with our advanced and user-friendly system.</p>
+            <div class="btn-group-vertical mt-4">
+                <a href="/take_attendance" class="btn btn-primary btn-lg" data-bs-toggle="tooltip" data-bs-placement="top" title="Start taking attendance for your class">Take Attendance</a>
+                <a href="/see_attendance" class="btn btn-secondary btn-lg" data-bs-toggle="tooltip" data-bs-placement="top" title="View attendance records for your classes">See Attendance</a>
+                <button class="btn btn-danger btn-lg" onclick="confirmLogout()" data-bs-toggle="tooltip" data-bs-placement="top" title="Log out of your account">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize Bootstrap tooltips
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+        // Confirm logout action
+        function confirmLogout() {
+            const confirmed = confirm("Are you sure you want to log out?");
+            if (confirmed) {
+                window.location.href = "/logout";
+            }
+        }
+    </script>
+</body>
+</html>

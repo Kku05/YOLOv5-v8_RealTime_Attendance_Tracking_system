@@ -1,0 +1,163 @@
+================================================================================
+           RATS (REAL-TIME ATTENDANCE TRACKING SYSTEM) - PROJECT OVERVIEW
+================================================================================
+Project: Real-Time Attendance Tracking System using YOLO and Face Recognition
+Architecture: Flask Web Framework + YOLO Object Detection + Dlib / MediaPipe + KDTree
+
+--------------------------------------------------------------------------------
+1. PROJECT OBJECTIVE & SUMMARY
+--------------------------------------------------------------------------------
+RATS (Real-time Attendance Tracking System) is an intelligent, automated classroom
+attendance recording system that uses computer vision, deep learning, and biometric
+face recognition.
+
+Instead of manual roll calls, the system:
+1. Detects human faces in real time using Ultralytics YOLO models (YOLOv5 / YOLOv8).
+2. Extracts 128-dimensional biometric face embeddings via dlib and face_recognition.
+3. Matches the detected face against a pre-registered database using a KDTree.
+4. Verifies liveness to prevent photo/spoofing attacks via:
+   - Eye Blink Detection (calculating Eye Aspect Ratio across 68 facial landmarks).
+   - Hand Gesture Detection (verifying raised hand via MediaPipe Hands).
+5. Automatically marks and logs student attendance in date-stamped CSV files.
+6. Provides a responsive web portal for teachers to log in, take attendance, and
+   review past attendance records organized by teacher, subject, and date.
+
+--------------------------------------------------------------------------------
+2. PROJECT DIRECTORY & FILE STRUCTURE
+--------------------------------------------------------------------------------
+RATS_YOLO_ALL/
+│
+├── Yolov8Eye.py           # Main Web App: YOLOv8 + Dlib Eye Blink Attendance (Port 5003)
+├── Yolov8Hand.py          # Main Web App: YOLOv8 + MediaPipe Hand Gesture Attendance (Port 5000)
+├── Yolov8Login.py         # Main Web App: YOLOv8 Face Detection Attendance (Port 5000)
+│
+├── Yolov5Eye.py           # Web App: YOLOv5 + Dlib Eye Blink Attendance (Port 5001)
+├── Yolov5Hand.py          # Web App: YOLOv5 + MediaPipe Hand Gesture Attendance (Port 5000)
+├── Yolov5Login.py         # Web App: YOLOv5 Face Detection Attendance (Port 5000)
+│
+├── shape_predictor_68_face_landmarks.dat  # Dlib 68-point facial landmark model (~99MB)
+│
+├── yolov8/                # YOLOv8 Model Weights Folder
+│   ├── yolov8n.pt         # YOLOv8 Nano model weights (~6.5MB)
+│   └── yolov8l.pt         # YOLOv8 Large model weights (~87MB)
+│
+├── yolov5/                # YOLOv5 Model Weights Folder
+│   ├── yolov5s.pt         # YOLOv5 Small model weights (~14.8MB)
+│   └── yolov5su.pt        # YOLOv5 Small-updated model weights (~18.5MB)
+│
+├── users.csv              # Teacher / Admin user credentials
+├── known_faces.csv        # Registered student / staff face dataset index
+│
+├── photos/                # Enrolled student and staff photos
+│   ├── tirth.jpg
+│   ├── vishal.jpg
+│   ├── Jyotima'am.jpeg
+│   ├── Poojama'am.jpeg
+│   ├── parulmam.png
+│   └── deepaksir.png
+│
+├── attendance/            # Generated attendance records hierarchy
+│   ├── <teacher_name>/
+│   │   └── <class_name>/
+│   │       └── <YYYYMMDD>/
+│   │           └── <teacher>_<class>_<timestamp>.csv
+│
+├── templates/             # HTML Web UI Templates
+│   ├── login.html         # Portal login page
+│   ├── home.html          # Dashboard home page
+│   ├── take_attendance.html # Live camera feed & real-time attendance table
+│   └── see_attendance.html  # Historical attendance viewer & filter
+│
+├── static/                # Static assets (images, icons)
+│   ├── login.png          # Login illustration
+│   └── home.png           # Dashboard illustration
+│
+├── requirements.txt       # Project dependencies for pip installation
+├── MAC_SETUP_AND_REQUIREMENTS.txt # Detailed Mac environment guide
+└── PROJECT_OVERVIEW.txt   # This complete project explanation file
+
+--------------------------------------------------------------------------------
+3. EXPLANATION OF EVERY PYTHON SCRIPT & MODULE
+--------------------------------------------------------------------------------
+
+1. Yolov8Eye.py (Recommended Main App):
+   - Combines YOLOv8 + Dlib 68 Facial Landmarks for Liveness Verification.
+   - Computes Eye Aspect Ratio (EAR) using Euclidean distance between eyelid points:
+     EAR = (||p2 - p6|| + ||p3 - p5||) / (2 * ||p1 - p4||)
+   - If EAR falls below EAR_THRESHOLD (0.3) for consecutive frames, a blink is detected.
+   - Once a blink is confirmed on a recognized student, attendance is marked.
+   - Runs on Port 5003 to avoid port conflicts on macOS.
+
+2. Yolov8Hand.py:
+   - Combines YOLOv8 face recognition with MediaPipe Hands.
+   - Detects hand landmarks in the frame using mp.solutions.hands.
+   - When a student's face is recognized AND their hand is raised, attendance is recorded.
+   - Runs on Port 5000.
+
+3. Yolov8Login.py:
+   - Standard YOLOv8 face detection and KDTree face recognition without liveness constraints.
+   - Directly marks attendance upon recognizing a known student.
+   - Runs on Port 5000.
+
+4. Yolov5Eye.py / Yolov5Hand.py / Yolov5Login.py:
+   - Identical feature pipeline as the YOLOv8 scripts, but utilizing YOLOv5 weights
+     (yolov5su.pt / yolov5s.pt) for comparison and performance testing.
+
+--------------------------------------------------------------------------------
+4. HOW THE FACE RECOGNITION & KDTREE PIPELINE WORKS
+--------------------------------------------------------------------------------
+Step 1: Initialization & Face Enrollment
+   - Upon startup, the script reads 'known_faces.csv'.
+   - Loads each registered photo from 'photos/'.
+   - Computes a 128-dimensional numeric embedding vector for each face using dlib/ResNet.
+   - Builds a KDTree spatial index from the 128-d vectors for sub-millisecond lookups.
+
+Step 2: Real-Time Detection Loop (Webcam Stream)
+   - OpenCV captures video frame from FaceTime HD camera (cv2.VideoCapture(0)).
+   - YOLO detects face bounding boxes [x1, y1, x2, y2].
+   - Region of Interest (ROI) is converted from BGR to RGB.
+   - face_recognition computes 128-d embedding for the live face.
+   - KDTree queries the nearest neighbor:
+     * If Euclidean distance < 0.7: Identified as registered student (Name + ID).
+     * If distance >= 0.7: Labeled as "Unknown".
+
+Step 3: Liveness Verification (Eye Blink / Hand Gesture)
+   - If Eye Blink script: EAR is measured across landmarks 36-41 (left eye) & 42-47 (right eye).
+   - If Hand Gesture script: MediaPipe verifies hand landmark presence.
+
+Step 4: Attendance Recording
+   - Once verified, student's Name, ID, and Timestamp are added to memory.
+   - When the teacher clicks "Save Attendance", a CSV file is generated inside:
+     attendance/<teacher>/<class>/<date>/<teacher>_<class>_<timestamp>.csv
+
+--------------------------------------------------------------------------------
+5. HOW TO OPERATE THE WEB INTERFACE
+--------------------------------------------------------------------------------
+1. Login:
+   - Navigate to http://127.0.0.1:5003 (or 5000).
+   - Enter Teacher Username and ID (from users.csv, e.g., tirth / AB1234CD).
+
+2. Dashboard:
+   - Choose "Take Attendance" or "See Attendance".
+
+3. Take Attendance:
+   - Enter Class Name (e.g. "Computer Vision - A").
+   - Click "Start Attendance".
+   - Live video stream opens with real-time green bounding boxes.
+   - Students look at the camera and blink (or raise hand).
+   - The table below updates in real time with names and timestamps.
+   - Click "Save Attendance" to store the records.
+
+4. See Attendance:
+   - Select Class and Date (YYYY-MM-DD).
+   - View past CSV files and inspect exact attendance records.
+
+--------------------------------------------------------------------------------
+6. SUMMARY OF USER CREDENTIALS (FROM users.csv)
+--------------------------------------------------------------------------------
+Username:        User ID:
+tirth            AB1234CD
+vishal           XY5678EF
+ayush            GH9012IJ
+deepak sir       1234QWER
+================================================================================
