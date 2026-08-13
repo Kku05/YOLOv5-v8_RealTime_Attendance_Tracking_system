@@ -25,15 +25,17 @@ Instead of manual roll calls, the system:
 --------------------------------------------------------------------------------
 2. PROJECT DIRECTORY & FILE STRUCTURE
 --------------------------------------------------------------------------------
-RATS_YOLO_ALL/
+YOLOv5-v8_RealTime_Attendance_Tracking_system/
+│
+├── run_mac.sh             # Interactive macOS launcher
 │
 ├── Yolov8Eye.py           # Main Web App: YOLOv8 + Dlib Eye Blink Attendance (Port 5003)
-├── Yolov8Hand.py          # Main Web App: YOLOv8 + MediaPipe Hand Gesture Attendance (Port 5000)
-├── Yolov8Login.py         # Main Web App: YOLOv8 Face Detection Attendance (Port 5000)
+├── Yolov8Hand.py          # Main Web App: YOLOv8 + MediaPipe Hand Gesture Attendance (Port 5002)
+├── Yolov8Login.py         # Main Web App: YOLOv8 Face Detection Attendance (Port 5004)
 │
 ├── Yolov5Eye.py           # Web App: YOLOv5 + Dlib Eye Blink Attendance (Port 5001)
-├── Yolov5Hand.py          # Web App: YOLOv5 + MediaPipe Hand Gesture Attendance (Port 5000)
-├── Yolov5Login.py         # Web App: YOLOv5 Face Detection Attendance (Port 5000)
+├── Yolov5Hand.py          # Web App: YOLOv5 + MediaPipe Hand Gesture Attendance (Port 5005)
+├── Yolov5Login.py         # Web App: YOLOv5 Face Detection Attendance (Port 5006)
 │
 ├── shape_predictor_68_face_landmarks.dat  # Dlib 68-point facial landmark model (~99MB)
 │
@@ -92,14 +94,14 @@ RATS_YOLO_ALL/
    - Combines YOLOv8 face recognition with MediaPipe Hands.
    - Detects hand landmarks in the frame using mp.solutions.hands.
    - When a student's face is recognized AND their hand is raised, attendance is recorded.
-   - Runs on Port 5000.
+   - Runs on Port 5002.
 
 3. Yolov8Login.py:
    - Standard YOLOv8 face detection and KDTree face recognition without liveness constraints.
    - Directly marks attendance upon recognizing a known student.
-   - Runs on Port 5000.
+   - Runs on Port 5004.
 
-4. Yolov5Eye.py / Yolov5Hand.py / Yolov5Login.py:
+4. Yolov5Eye.py (Port 5001) / Yolov5Hand.py (Port 5005) / Yolov5Login.py (Port 5006):
    - Identical feature pipeline as the YOLOv8 scripts, but utilizing YOLOv5 weights
      (yolov5su.pt / yolov5s.pt) for comparison and performance testing.
 
@@ -133,14 +135,17 @@ Step 4: Attendance Recording
 --------------------------------------------------------------------------------
 5. HOW TO OPERATE THE WEB INTERFACE
 --------------------------------------------------------------------------------
-1. Login:
-   - Navigate to http://127.0.0.1:5003 (or 5000).
+1. Launch Application:
+   - Use `./run_mac.sh` or run any script (e.g. `python Yolov8Eye.py`).
+   - Navigate to the designated URL (e.g. http://127.0.0.1:5003).
+
+2. Login:
    - Enter Teacher Username and ID (from users.csv, e.g., tirth / AB1234CD).
 
-2. Dashboard:
+3. Dashboard:
    - Choose "Take Attendance" or "See Attendance".
 
-3. Take Attendance:
+4. Take Attendance:
    - Enter Class Name (e.g. "Computer Vision - A").
    - Click "Start Attendance".
    - Live video stream opens with real-time green bounding boxes.
@@ -148,7 +153,7 @@ Step 4: Attendance Recording
    - The table below updates in real time with names and timestamps.
    - Click "Save Attendance" to store the records.
 
-4. See Attendance:
+5. See Attendance:
    - Select Class and Date (YYYY-MM-DD).
    - View past CSV files and inspect exact attendance records.
 

@@ -14,13 +14,15 @@
 ## 📁 2. File & Directory Breakdown
 
 ```
-RATS_YOLO_ALL/
+YOLOv5-v8_RealTime_Attendance_Tracking_system/
+├── run_mac.sh              # Interactive macOS launcher
+│
 ├── Yolov8Eye.py            # Main App: YOLOv8 + Dlib Eye Blink Liveness (Port 5003)
-├── Yolov8Hand.py           # Main App: YOLOv8 + MediaPipe Hand Gesture Liveness (Port 5000)
-├── Yolov8Login.py          # Main App: YOLOv8 Face Detection Attendance (Port 5000)
+├── Yolov8Hand.py           # Main App: YOLOv8 + MediaPipe Hand Gesture Liveness (Port 5002)
+├── Yolov8Login.py          # Main App: YOLOv8 Face Detection Attendance (Port 5004)
 ├── Yolov5Eye.py            # YOLOv5 + Dlib Eye Blink Liveness (Port 5001)
-├── Yolov5Hand.py           # YOLOv5 + MediaPipe Hand Gesture Liveness (Port 5000)
-├── Yolov5Login.py          # YOLOv5 Face Detection Attendance (Port 5000)
+├── Yolov5Hand.py           # YOLOv5 + MediaPipe Hand Gesture Liveness (Port 5005)
+├── Yolov5Login.py          # YOLOv5 Face Detection Attendance (Port 5006)
 │
 ├── shape_predictor_68_face_landmarks.dat  # Dlib 68-point landmark predictor (~99MB)
 │
@@ -48,23 +50,23 @@ RATS_YOLO_ALL/
 
 ```mermaid
 flowchart TD
-    A[Webcam Feed cv2.VideoCapture 0] --> B[YOLO Face Detection]
-    B --> C[Extract Face ROI RGB]
-    C --> D[128-d Face Embedding face_recognition]
-    D --> E[KDTree Nearest Neighbor Search]
+    A["Webcam Feed (cv2.VideoCapture 0)"] --> B["YOLO Face Detection"]
+    B --> C["Extract Face ROI RGB"]
+    C --> D["128-d Face Embedding face_recognition"]
+    D --> E["KDTree Nearest Neighbor Search"]
     
-    E --> F{Distance < 0.7?}
-    F -- No --> G[Label: Unknown]
-    F -- Yes --> H[Identify Student Name & ID]
+    E --> F{"Distance < 0.7?"}
+    F -- No --> G["Label: Unknown"]
+    F -- Yes --> H["Identify Student Name & ID"]
     
-    H --> I{Liveness Check}
-    I -- Eye Blink Mode --> J[Dlib 68 Landmarks & EAR Threshold < 0.3]
-    I -- Hand Gesture Mode --> K[MediaPipe Hand Landmark Presence]
+    H --> I{"Liveness Check"}
+    I -- Eye Blink Mode --> J["Dlib 68 Landmarks & EAR Threshold < 0.3"]
+    I -- Hand Gesture Mode --> K["MediaPipe Hand Landmark Presence"]
     
-    J -- Blink Confirmed --> L[Log Attendance to Memory]
+    J -- Blink Confirmed --> L["Log Attendance to Memory"]
     K -- Hand Raised --> L
     
-    L --> M[Save to attendance/teacher/class/date.csv]
+    L --> M["Save to attendance/teacher/class/date.csv"]
 ```
 
 ### 1. Face Recognition & KDTree Matching
@@ -82,13 +84,13 @@ flowchart TD
 
 ## 🖥️ 4. Web Interface & Workflows
 
-1. **Authentication ([templates/login.html](file:///Users/tirth/Downloads/my%20project/RATS_YOLO_ALL/templates/login.html))**:
-   - Teachers log in using credentials verified against [users.csv](file:///Users/tirth/Downloads/my%20project/RATS_YOLO_ALL/users.csv).
-2. **Dashboard ([templates/home.html](file:///Users/tirth/Downloads/my%20project/RATS_YOLO_ALL/templates/home.html))**:
+1. **Authentication ([templates/login.html](file:///Users/tirth/Downloads/my%20project/YOLOv5-v8_RealTime_Attendance_Tracking_system/templates/login.html))**:
+   - Teachers log in using credentials verified against [users.csv](file:///Users/tirth/Downloads/my%20project/YOLOv5-v8_RealTime_Attendance_Tracking_system/users.csv).
+2. **Dashboard ([templates/home.html](file:///Users/tirth/Downloads/my%20project/YOLOv5-v8_RealTime_Attendance_Tracking_system/templates/home.html))**:
    - Navigation options to either start an attendance session or inspect past attendance logs.
-3. **Take Attendance ([templates/take_attendance.html](file:///Users/tirth/Downloads/my%20project/RATS_YOLO_ALL/templates/take_attendance.html))**:
+3. **Take Attendance ([templates/take_attendance.html](file:///Users/tirth/Downloads/my%20project/YOLOv5-v8_RealTime_Attendance_Tracking_system/templates/take_attendance.html))**:
    - Live multipart JPEG stream (`/video_feed`).
    - Dynamic real-time table populated as students are verified.
    - Saves final records with timestamps to `attendance/<teacher>/<class>/<date>/`.
-4. **See Attendance ([templates/see_attendance.html](file:///Users/tirth/Downloads/my%20project/RATS_YOLO_ALL/templates/see_attendance.html))**:
+4. **See Attendance ([templates/see_attendance.html](file:///Users/tirth/Downloads/my%20project/YOLOv5-v8_RealTime_Attendance_Tracking_system/templates/see_attendance.html))**:
    - Historical attendance viewer allowing teachers to filter by class name and date.

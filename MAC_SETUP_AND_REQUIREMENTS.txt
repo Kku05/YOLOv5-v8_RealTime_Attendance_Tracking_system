@@ -34,8 +34,12 @@ When moving a machine learning computer vision project from Windows to macOS:
 
 6. macOS Port 5000 Conflict (AirPlay Receiver):
    - macOS Monterey / Ventura / Sonoma / Sequoia use port 5000 for AirPlay Receiver.
-   - You can either turn off AirPlay Receiver in System Settings or run scripts on
-     dedicated ports (e.g. 5001, 5003).
+   - Fix: All 6 project entry points are configured with unique dedicated ports (5001-5006)
+     with dynamic PORT environment variable overrides.
+
+7. Cross-Platform Relative Path Resolution:
+   - All scripts now use BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+     to ensure models, landmarks, and CSVs load reliably from any working folder.
 
 --------------------------------------------------------------------------------
 2. SYSTEM-LEVEL PREREQUISITES (ONE-TIME SETUP)
@@ -80,7 +84,7 @@ The project uses the following key libraries:
 7. SciPy (1.17.1):
    Computes Euclidean distances between eye coordinates for blink calculation.
 
-8. MediaPipe (mediapipe 0.10.9 / 0.10.14):
+8. MediaPipe (mediapipe 0.10.14):
    Google's real-time hand tracking framework used for hand gesture detection.
 
 9. setuptools (<80):
@@ -92,7 +96,7 @@ The project uses the following key libraries:
 Open Terminal on your Mac and run:
 
 # 1. Navigate to the project directory
-cd "/Users/tirth/Downloads/my project/RATS_YOLO_ALL"
+cd "/Users/tirth/Downloads/my project/YOLOv5-v8_RealTime_Attendance_Tracking_system"
 
 # 2. Ensure Homebrew is in your path
 export PATH="/opt/homebrew/bin:$PATH"
@@ -110,55 +114,37 @@ pip install -r requirements.txt
 5. HOW TO RUN THE DIFFERENT MODES
 --------------------------------------------------------------------------------
 Always make sure your virtual environment is active first:
-cd "/Users/tirth/Downloads/my project/RATS_YOLO_ALL"
+cd "/Users/tirth/Downloads/my project/YOLOv5-v8_RealTime_Attendance_Tracking_system"
 source venv/bin/activate
 
-===================================================================
-MODE 1: YOLOv8 + EYE BLINK ATTENDANCE (PORT 5003)
-===================================================================
-Command:
+Option A: Interactive macOS Launcher (Recommended)
+   ./run_mac.sh
+
+Option B: Run a specific Python script:
+
+MODE 1: YOLOv8 + EYE BLINK ATTENDANCE (PORT 5003) [Recommended]
    python Yolov8Eye.py
+   Browser: http://127.0.0.1:5003
 
-Browser URL:
-   http://127.0.0.1:5003
-
-Description:
-   - Uses YOLOv8 for face detection.
-   - Uses Dlib 68-landmarks for Eye Aspect Ratio (EAR) blink detection.
-   - Attendance is marked ONLY when the user blinks in front of the camera.
-
-===================================================================
-MODE 2: YOLOv8 + HAND GESTURE ATTENDANCE (PORT 5000)
-===================================================================
-Command:
+MODE 2: YOLOv8 + HAND GESTURE ATTENDANCE (PORT 5002)
    python Yolov8Hand.py
+   Browser: http://127.0.0.1:5002
 
-Browser URL:
-   http://127.0.0.1:5000
-
-Description:
-   - Uses YOLOv8 for face detection.
-   - Uses MediaPipe Hands to detect raised hand gestures.
-   - Attendance is marked ONLY when a hand is raised alongside a recognized face.
-
-===================================================================
-MODE 3: YOLOv8 STANDARD LOGIN ATTENDANCE (PORT 5000)
-===================================================================
-Command:
+MODE 3: YOLOv8 STANDARD LOGIN ATTENDANCE (PORT 5004)
    python Yolov8Login.py
+   Browser: http://127.0.0.1:5004
 
-Browser URL:
-   http://127.0.0.1:5000
+MODE 4: YOLOv5 + EYE BLINK ATTENDANCE (PORT 5001)
+   python Yolov5Eye.py
+   Browser: http://127.0.0.1:5001
 
-Description:
-   - Standard YOLOv8 face recognition attendance marking.
+MODE 5: YOLOv5 + HAND GESTURE ATTENDANCE (PORT 5005)
+   python Yolov5Hand.py
+   Browser: http://127.0.0.1:5005
 
-===================================================================
-MODE 4: YOLOv5 MODES
-===================================================================
-- Eye Blink (Port 5001):   python Yolov5Eye.py
-- Hand Gesture (Port 5000): python Yolov5Hand.py
-- Login Mode (Port 5000):   python Yolov5Login.py
+MODE 6: YOLOv5 STANDARD LOGIN ATTENDANCE (PORT 5006)
+   python Yolov5Login.py
+   Browser: http://127.0.0.1:5006
 
 --------------------------------------------------------------------------------
 6. LOGIN CREDENTIALS (FROM users.csv)
@@ -177,12 +163,11 @@ deepak sir   1234QWER
 Q1: The camera screen is black or doesn't open.
 A1: macOS requires camera permissions.
     Go to: Apple Menu > System Settings > Privacy & Security > Camera.
-    Make sure your Terminal (or VS Code / IDE) toggle is turned ON.
+    Make sure your Terminal (or VS Code / Antigravity IDE) toggle is turned ON.
 
-Q2: Port 5000 'Address already in use' error.
-A2: macOS uses port 5000 for AirPlay Receiver.
-    Go to: Apple Menu > System Settings > General > AirDrop & AirPlay.
-    Turn 'AirPlay Receiver' to OFF, or run Yolov8Eye.py on port 5003.
+Q2: Port conflict error.
+A2: Each script is bound to its own port (5001 - 5006). You can also run with any custom port:
+    PORT=8080 python Yolov8Eye.py
 
 Q3: How to add a new person's face?
 A3: 1. Place their clear photo inside the 'photos/' folder (e.g. photos/john.jpg).

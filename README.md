@@ -29,12 +29,14 @@
 ## 📁 Repository Structure
 
 ```
+├── run_mac.sh              # macOS Interactive Launcher Script
+│
 ├── Yolov8Eye.py            # Main App: YOLOv8 + Eye Blink Liveness Attendance (Port 5003)
-├── Yolov8Hand.py           # Main App: YOLOv8 + MediaPipe Hand Gesture Attendance (Port 5000)
-├── Yolov8Login.py          # Main App: YOLOv8 Face Recognition Attendance (Port 5000)
+├── Yolov8Hand.py           # Main App: YOLOv8 + MediaPipe Hand Gesture Attendance (Port 5002)
+├── Yolov8Login.py          # Main App: YOLOv8 Face Recognition Attendance (Port 5004)
 ├── Yolov5Eye.py            # YOLOv5 + Eye Blink Attendance (Port 5001)
-├── Yolov5Hand.py           # YOLOv5 + MediaPipe Hand Gesture Attendance (Port 5000)
-├── Yolov5Login.py          # YOLOv5 Face Recognition Attendance (Port 5000)
+├── Yolov5Hand.py           # YOLOv5 + MediaPipe Hand Gesture Attendance (Port 5005)
+├── Yolov5Login.py          # YOLOv5 Face Recognition Attendance (Port 5006)
 │
 ├── shape_predictor_68_face_landmarks.dat  # Dlib 68-point landmark model (~99MB)
 │
@@ -79,23 +81,34 @@ pip install -r requirements.txt
 
 ### 3. Run the Application
 
+#### Option A: macOS Launcher Script (Easiest)
+```bash
+./run_mac.sh
+```
+
+#### Option B: Run Specific Mode Directly
 * **Eye Blink Detection Mode (Recommended)**:
   ```bash
   python Yolov8Eye.py
   ```
-  *Open your browser at `http://127.0.0.1:5003`*
+  *Open browser at `http://127.0.0.1:5003`*
 
 * **Hand Gesture Mode**:
   ```bash
   python Yolov8Hand.py
   ```
-  *Open your browser at `http://127.0.0.1:5000`*
+  *Open browser at `http://127.0.0.1:5002`*
 
 * **Face Recognition Login Mode**:
   ```bash
   python Yolov8Login.py
   ```
-  *Open your browser at `http://127.0.0.1:5000`*
+  *Open browser at `http://127.0.0.1:5004`*
+
+* **YOLOv5 Modes**:
+  * `python Yolov5Eye.py` (Port 5001)
+  * `python Yolov5Hand.py` (Port 5005)
+  * `python Yolov5Login.py` (Port 5006)
 
 ---
 

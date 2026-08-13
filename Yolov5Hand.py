@@ -12,39 +12,47 @@ import mediapipe as mp
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace with a secure secret key
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # Load YOLOv5 model
-model = YOLO('yolov5/yolov5su.pt')  # Use 'yolov5s' or your custom-trained YOLOv5 model
+model = YOLO(os.path.join(BASE_DIR, 'yolov5/yolov5su.pt'))  # Use 'yolov5s' or your custom-trained YOLOv5 model
 
 # Load user credentials from a CSV file
 users = {}
-with open('users.csv', 'r') as file:
-    reader = csv.DictReader(file)
-    for row in reader:
-        username = row['username']
-        user_id = row['user_id']
-        users[username] = user_id
+users_csv = os.path.join(BASE_DIR, 'users.csv')
+if os.path.exists(users_csv):
+    with open(users_csv, 'r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            username = row['username']
+            user_id = row['user_id']
+            users[username] = user_id
 
 # Load known faces and their names and IDs from CSV file
 known_face_encodings = []
 known_face_names = []
 known_face_ids = []
 
-with open('known_faces.csv', 'r') as file:
-    reader = csv.DictReader(file)
-    for row in reader:
-        image_path = row['image_path']
-        name = row['name']
-        id = row['id']
+known_faces_csv = os.path.join(BASE_DIR, 'known_faces.csv')
+if os.path.exists(known_faces_csv):
+    with open(known_faces_csv, 'r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            image_path = row['image_path']
+            name = row['name']
+            id = row['id']
 
-        image = face_recognition.load_image_file(image_path)
-        encoding = face_recognition.face_encodings(image)
-        if encoding:
-            known_face_encodings.append(encoding[0])
-            known_face_names.append(name)
-            known_face_ids.append(id)
+            full_image_path = os.path.join(BASE_DIR, image_path) if not os.path.isabs(image_path) else image_path
+            if os.path.exists(full_image_path):
+                image = face_recognition.load_image_file(full_image_path)
+                encoding = face_recognition.face_encodings(image)
+                if encoding:
+                    known_face_encodings.append(encoding[0])
+                    known_face_names.append(name)
+                    known_face_ids.append(id)
 
 # Build a KD-tree for fast nearest neighbor search
-face_encodings_tree = KDTree(known_face_encodings)
+face_encodings_tree = KDTree(known_face_encodings) if known_face_encodings else None
 
 # Global variables to store attendance data
 attendance_data = []
@@ -59,15 +67,23 @@ def login():
 
 @app.route('/login', methods=['POST'])
 def login_user():
-    # Debugging: Print the form data
-    print(request.form)
+    username = (request.form.get('username') or '').strip()
+    user_id = (request.form.get('user_id') or '').strip()
 
-    username = request.form.get('username')
-    user_id = request.form.get('user_id')  # Use .get() to avoid KeyError
+    # Load users dynamically so new entries or edits work immediately
+    current_users = {}
+    users_csv = os.path.join(BASE_DIR, 'users.csv')
+    if os.path.exists(users_csv):
+        with open(users_csv, 'r') as file:
+            for row in csv.DictReader(file):
+                u = (row.get('username') or '').strip()
+                uid = (row.get('user_id') or '').strip()
+                if u:
+                    current_users[u.lower()] = (u, uid)
 
-    if username in users and users[username] == user_id:
-        session['username'] = username  # Store the username in the session
-        return redirect(url_for('home'))  # Redirect directly to the home page
+    if username.lower() in current_users and current_users[username.lower()][1] == user_id:
+        session['username'] = current_users[username.lower()][0]
+        return redirect(url_for('home'))
     else:
         return render_template('login.html', error="Invalid username or ID. Please try again.")
 
@@ -91,9 +107,9 @@ def take_attendance():
     if request.method == 'POST':
         class_name = request.form['class_name']
         current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-        attendance_folder = f"attendance/{teacher_name}/{class_name}/{current_time[:8]}"
+        attendance_folder = os.path.join(BASE_DIR, f"attendance/{teacher_name}/{class_name}/{current_time[:8]}")
         os.makedirs(attendance_folder, exist_ok=True)
-        attendance_filename = f"{attendance_folder}/{teacher_name}_{class_name}_{current_time}.csv"
+        attendance_filename = os.path.join(attendance_folder, f"{teacher_name}_{class_name}_{current_time}.csv")
 
         # Reset attendance data
         recorded_names = set()
@@ -113,9 +129,13 @@ def generate_frames():
     global attendance_data, recorded_names, attendance_filename
     cap = cv2.VideoCapture(0)  # Use 0 for the default camera. Change to 1 if it doesn't work.
 
+    if not cap.isOpened():
+        print("Warning: Camera index 0 could not be opened. Retrying index 1...")
+        cap = cv2.VideoCapture(1)
+
     # Check if the camera opened successfully
     if not cap.isOpened():
-        raise RuntimeError("Error: Could not open the camera. Please check the camera connection or index.")
+        print("Error: Could not open webcam. On Mac, check System Settings > Privacy & Security > Camera.")
 
     # Set the frame width, height, and frame rate
     frame_width = 1280
@@ -178,11 +198,15 @@ def generate_frames():
             face_ids = []
             for face_encoding in face_encodings:
                 # Find the closest match in the KD-tree
-                dist, ind = face_encodings_tree.query([face_encoding], k=1)
-                best_match_index = ind[0][0]
-                if dist[0][0] < 0.7:  # Adjust the threshold as needed
-                    name = known_face_names[best_match_index]
-                    id = known_face_ids[best_match_index]
+                if face_encodings_tree is not None:
+                    dist_val, ind = face_encodings_tree.query([face_encoding], k=1)
+                    best_match_index = ind[0][0]
+                    if dist_val[0][0] < 0.7:  # Adjust the threshold as needed
+                        name = known_face_names[best_match_index]
+                        id = known_face_ids[best_match_index]
+                    else:
+                        name = "Unknown"
+                        id = "Unknown"
                 else:
                     name = "Unknown"
                     id = "Unknown"
@@ -249,7 +273,7 @@ def see_attendance():
         teacher_name = request.form['teacher_name']
         class_name = request.form['class_name']
         date = request.form['date'].replace('-', '')  # Convert 'YYYY-MM-DD' to 'YYYYMMDD'
-        attendance_folder = f"attendance/{teacher_name}/{class_name}/{date}"
+        attendance_folder = os.path.join(BASE_DIR, f"attendance/{teacher_name}/{class_name}/{date}")
         if os.path.exists(attendance_folder):
             csv_files = os.listdir(attendance_folder)
             return render_template('see_attendance.html', teacher_name=teacher_name, class_name=class_name, date=date, csv_files=csv_files)
@@ -266,14 +290,19 @@ def view_attendance():
     date = request.form['date']
     csv_file = request.form.get('csv_file')
     attendance_records = []
+    attendance_folder = os.path.join(BASE_DIR, f"attendance/{teacher_name}/{class_name}/{date}")
+    csv_files = []
+    if os.path.exists(attendance_folder):
+        csv_files = os.listdir(attendance_folder)
     if csv_file:
-        file_path = f"attendance/{teacher_name}/{class_name}/{date}/{csv_file}"
+        file_path = os.path.join(attendance_folder, csv_file)
         if os.path.exists(file_path):
             with open(file_path, 'r') as csvfile:
                 reader = csv.DictReader(csvfile)
                 for row in reader:
                     attendance_records.append(row)
-    return render_template('see_attendance.html', teacher_name=teacher_name, class_name=class_name, date=date, csv_file=csv_file, attendance_records=attendance_records, csv_files=os.listdir(f"attendance/{teacher_name}/{class_name}/{date}"))
+    return render_template('see_attendance.html', teacher_name=teacher_name, class_name=class_name, date=date, csv_file=csv_file, attendance_records=attendance_records, csv_files=csv_files)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5005))
+    app.run(debug=True, port=port)
