@@ -3,66 +3,195 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Take Attendance</title>
+    <title>Take Attendance - Real-Time Tracking</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
-            background: linear-gradient(135deg, #0d47a1, #1565c0); /* Mild dark blue gradient */
+            background: linear-gradient(135deg, #0d47a1, #1565c0);
             color: #fff;
-            font-family: 'Arial', sans-serif;
-            overflow-x: hidden; /* Prevent horizontal scrolling */
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            padding-bottom: 50px;
         }
 
         .navbar {
-            background-color: #0d47a1; /* Dark blue color for navbar */
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: rgba(13, 71, 161, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
 
         .navbar-brand {
-            font-weight: bold;
-            color: #fff;
+            font-weight: 700;
+            color: #fff !important;
+            letter-spacing: 0.5px;
         }
 
-        .container {
-            margin-top: 50px;
+        .card-custom {
+            background: rgba(255, 255, 255, 0.96);
+            color: #212529;
+            border-radius: 16px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+            border: none;
+            padding: 28px;
+        }
+
+        /* Model Selection Option Cards */
+        .engine-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            position: relative;
+            background: #fdfdfd;
+            height: 100%;
+        }
+
+        .engine-card:hover {
+            border-color: #1565c0;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(21, 101, 192, 0.15);
+        }
+
+        .engine-radio:checked + .engine-card {
+            border-color: #0d47a1;
+            background: #eef5fc;
+            box-shadow: 0 0 0 1px #0d47a1;
+        }
+
+        .engine-icon {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            color: #0d47a1;
+        }
+
+        .engine-title {
+            font-weight: 700;
+            font-size: 1.05rem;
+            margin-bottom: 4px;
+            color: #1a237e;
+        }
+
+        .engine-desc {
+            font-size: 0.82rem;
+            color: #616161;
+            margin: 0;
+        }
+
+        .badge-recommended {
+            position: absolute;
+            top: -10px;
+            right: 12px;
+            background: linear-gradient(135deg, #00c853, #64dd17);
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 20px;
+            box-shadow: 0 2px 6px rgba(0, 200, 83, 0.4);
+        }
+
+        .video-container {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #000;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
         }
 
         .video-feed {
-            border-radius: 15px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            height: auto;
+            display: block;
         }
 
-        .attendance-list {
-            background: #1a237e; /* Darker blue for contrast */
+        .live-badge {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(220, 53, 69, 0.9);
             color: #fff;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-            max-height: 500px;
-            overflow-y: auto;
-        }
-
-        .attendance-list h4 {
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-
-        .list-group-item {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            border: none;
-            border-bottom: 1px solid #3949ab; /* Subtle border */
-            background: transparent;
+            gap: 6px;
+            z-index: 5;
+        }
+
+        .engine-badge-live {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(13, 71, 161, 0.85);
+            backdrop-filter: blur(8px);
             color: #fff;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            z-index: 5;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        .list-group-item:last-child {
-            border-bottom: none;
+        .pulsing-dot {
+            width: 8px;
+            height: 8px;
+            background: #fff;
+            border-radius: 50%;
+            animation: pulse 1.2s infinite;
         }
 
-        /* Background Animation */
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.7; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.7; }
+        }
+
+        .attendance-sidebar {
+            background: #1a237e;
+            color: #fff;
+            border-radius: 16px;
+            padding: 22px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .attendance-list-container {
+            max-height: 440px;
+            overflow-y: auto;
+            margin-top: 12px;
+        }
+
+        .student-item {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            border-left: 4px solid #00e676;
+            transition: background 0.2s ease;
+        }
+
+        .student-item:hover {
+            background: rgba(255, 255, 255, 0.14);
+        }
+
+        .student-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .student-meta {
+            font-size: 0.78rem;
+            color: #bbdefb;
+        }
+
+        /* Floating background shapes */
         .background-animation {
             position: fixed;
             top: 0;
@@ -73,190 +202,274 @@
             overflow: hidden;
         }
 
-        .background-animation .shape {
+        .shape {
             position: absolute;
-            animation: float 10s infinite ease-in-out;
-        }
-
-        .background-animation .shape.circle {
-            width: 150px;
-            height: 150px;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.06);
             border-radius: 50%;
-            top: 10%;
-            left: 20%;
-            animation-duration: 12s;
+            animation: float 14s infinite ease-in-out;
         }
 
-        .background-animation .shape.square {
-            width: 100px;
-            height: 100px;
-            background: rgba(255, 255, 255, 0.1);
-            top: 50%;
-            left: 70%;
-            animation-duration: 15s;
-        }
-
-        .background-animation .shape.triangle {
-            width: 0;
-            height: 0;
-            border-left: 50px solid transparent;
-            border-right: 50px solid transparent;
-            border-bottom: 100px solid rgba(255, 255, 255, 0.1);
-            top: 70%;
-            left: 30%;
-            animation-duration: 18s;
-        }
-
-        .background-animation .shape.hexagon {
-            width: 100px;
-            height: 100px;
-            background: rgba(255, 255, 255, 0.1);
-            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-            top: 20%;
-            left: 80%;
-            animation-duration: 16s;
-        }
-
-        .background-animation .shape.ellipse {
-            width: 200px;
-            height: 100px;
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 50%;
-            top: 40%;
-            left: 10%;
-            animation-duration: 14s;
-        }
-
-        .background-animation .shape.star {
-            width: 0;
-            height: 0;
-            border-left: 30px solid transparent;
-            border-right: 30px solid transparent;
-            border-bottom: 60px solid rgba(255, 255, 255, 0.1);
-            position: relative;
-            top: 60%;
-            left: 50%;
-            animation-duration: 20s;
-        }
-
-        .background-animation .shape.star:before {
-            content: '';
-            position: absolute;
-            top: 18px;
-            left: -30px;
-            width: 0;
-            height: 0;
-            border-left: 30px solid transparent;
-            border-right: 30px solid transparent;
-            border-top: 60px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .background-animation .shape.large-oval {
-            width: 400px;
-            height: 200px;
-            background: rgba(255, 255, 255, 0.08);
-            border-radius: 50%;
-            top: 20%;
-            left: 40%;
-            animation-duration: 25s;
-        }
+        .shape:nth-child(1) { width: 220px; height: 220px; top: 10%; left: 15%; animation-duration: 16s; }
+        .shape:nth-child(2) { width: 140px; height: 140px; top: 60%; left: 75%; animation-duration: 12s; }
+        .shape:nth-child(3) { width: 300px; height: 300px; top: 40%; left: 35%; animation-duration: 22s; }
 
         @keyframes float {
-            0% {
-                transform: translateY(0) translateX(0);
-            }
-            50% {
-                transform: translateY(-20px) translateX(20px);
-            }
-            100% {
-                transform: translateY(0) translateX(0);
-            }
+            0% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-25px) rotate(15deg); }
+            100% { transform: translateY(0) rotate(0deg); }
         }
     </style>
-    <script>
-        function fetchAttendance() {
-            fetch('/get_attendance')
-                .then(response => response.json())
-                .then(data => {
-                    const attendanceList = document.getElementById('attendance-list');
-                    attendanceList.innerHTML = '<h4>Attendance List</h4><ul class="list-group">' + data.map(record => `
-                        <li class="list-group-item">
-                            <span>${record.Name} (${record.ID})</span>
-                            <span>${record.Time}</span>
-                        </li>`).join('') + '</ul>';
-                });
-        }
-
-        setInterval(fetchAttendance, 5000); // Fetch attendance every 5 seconds
-    </script>
 </head>
 <body>
-    <!-- Background Animation -->
     <div class="background-animation">
-        <div class="shape circle"></div>
-        <div class="shape square"></div>
-        <div class="shape triangle"></div>
-        <div class="shape hexagon"></div>
-        <div class="shape ellipse"></div>
-        <div class="shape star"></div>
-        <div class="shape large-oval"></div>
+        <div class="shape"></div>
+        <div class="shape"></div>
+        <div class="shape"></div>
     </div>
 
-    <!-- Navbar -->
-    <nav class="navbar navbar-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/">
-                <i class="fas fa-home"></i> Attendance System
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('home') }}">
+                <i class="fas fa-camera-retro me-2"></i> Attendance Tracking System
             </a>
+            <div class="ms-auto d-flex gap-2">
+                <a href="{{ url_for('home') }}" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-home me-1"></i> Home
+                </a>
+                <a href="{{ url_for('see_attendance') }}" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-table me-1"></i> Records
+                </a>
+            </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
     <div class="container">
-        <h2 class="text-center mb-4">Take Attendance</h2>
-        <form method="POST" class="mb-5">
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="teacher_name" class="form-label">Teacher Name</label>
-                    <input type="text" class="form-control" id="teacher_name" name="teacher_name" value="{{ teacher_name }}" readonly>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label for="class_name" class="form-label">Class</label>
-                    <input type="text" class="form-control" id="class_name" name="class_name" required>
-                </div>
-            </div>
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary w-100">Start Attendance</button>
-                <a href="{{ url_for('take_attendance') }}" class="btn btn-secondary w-100">Restart</a>
-            </div>
-        </form>
+        <!-- Configuration Card (Shown when not currently taking attendance) -->
+        {% if not class_name %}
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card-custom">
+                    <div class="text-center mb-4">
+                        <h2 class="fw-bold text-primary"><i class="fas fa-user-check me-2"></i>Configure Attendance Session</h2>
+                        <p class="text-muted">Enter class details and select your preferred AI detection & liveness engine.</p>
+                    </div>
 
-        {% if teacher_name and class_name %}
-        <div class="row">
-            <!-- Video Feed Section -->
-            <div class="col-md-8">
-                <img src="{{ url_for('video_feed') }}" class="img-fluid video-feed">
-            </div>
-            <!-- Attendance List Section -->
-            <div class="col-md-4">
-                <div id="attendance-list" class="attendance-list">
-                    <h4>Attendance List</h4>
-                    <ul class="list-group">
-                        {% for data in attendance_data %}
-                            <li class="list-group-item">
-                                <span>{{ data.Name }} ({{ data.ID }})</span>
-                                <span>{{ data.Time }}</span>
-                            </li>
-                        {% endfor %}
-                    </ul>
+                    <form method="POST" action="{{ url_for('take_attendance') }}">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-secondary">Teacher / Instructor</label>
+                                <input type="text" class="form-control form-control-lg bg-light" name="teacher_name" value="{{ teacher_name }}" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-secondary">Select Class / Section <span class="text-danger">*</span></label>
+                                <select class="form-select form-select-lg" name="class_select" id="classSelect" onchange="toggleClassInput()" required autofocus>
+                                    {% if assigned_classes %}
+                                    <optgroup label="🌟 My Assigned Classes">
+                                        {% for c in assigned_classes %}
+                                        <option value="{{ c }}" {% if preselected_class == c or (not preselected_class and loop.first) %}selected{% endif %}>{{ c }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    {% endif %}
+
+                                    {% if all_classes %}
+                                    <optgroup label="🏫 Other Institutional Classes">
+                                        {% for c in all_classes %}
+                                            {% if not assigned_classes or c.code not in assigned_classes %}
+                                            <option value="{{ c.code }}" {% if preselected_class == c.code %}selected{% endif %}>{{ c.code }} - {{ c.name }}</option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </optgroup>
+                                    {% endif %}
+
+                                    <option value="__CUSTOM__" {% if preselected_class and preselected_class not in assigned_classes and all_classes and preselected_class not in all_classes|map(attribute='code') %}selected{% endif %}>
+                                        ➕ Substitute / Type Other Class...
+                                    </option>
+                                </select>
+
+                                <div id="customClassContainer" class="mt-2 {% if not preselected_class or (assigned_classes and preselected_class in assigned_classes) or (all_classes and preselected_class in all_classes|map(attribute='code')) %}d-none{% endif %}">
+                                    <input type="text" class="form-control" name="custom_class" id="customClassInput" value="{{ preselected_class if (not assigned_classes or preselected_class not in assigned_classes) and (not all_classes or preselected_class not in all_classes|map(attribute='code')) else '' }}" placeholder="Enter substitute / custom class name (e.g. ME-2B)">
+                                </div>
+                            </div>
+                        </div>
+
+                        <h5 class="fw-bold text-dark mb-3"><i class="fas fa-brain me-2 text-primary"></i>Choose Detection & Liveness Engine:</h5>
+                        
+                        <div class="row g-3 mb-4">
+                            <!-- Option 1: YOLOv8 Eye Blink -->
+                            <div class="col-md-6 col-lg-4">
+                                <input type="radio" class="d-none engine-radio" name="detection_mode" id="mode_v8_eye" value="yolov8_eye" checked>
+                                <label class="engine-card d-block" for="mode_v8_eye">
+                                    <span class="badge-recommended"><i class="fas fa-star me-1"></i>RECOMMENDED</span>
+                                    <div class="engine-icon"><i class="fas fa-eye"></i></div>
+                                    <div class="engine-title">YOLOv8 + Eye Blink</div>
+                                    <p class="engine-desc">Ultra-fast modern YOLOv8 face detection with dlib facial landmark Eye Aspect Ratio (EAR) blink verification.</p>
+                                </label>
+                            </div>
+
+                            <!-- Option 2: YOLOv8 Hand Gesture -->
+                            <div class="col-md-6 col-lg-4">
+                                <input type="radio" class="d-none engine-radio" name="detection_mode" id="mode_v8_hand" value="yolov8_hand">
+                                <label class="engine-card d-block" for="mode_v8_hand">
+                                    <div class="engine-icon"><i class="fas fa-hand-paper"></i></div>
+                                    <div class="engine-title">YOLOv8 + Hand Gesture</div>
+                                    <p class="engine-desc">YOLOv8 face detection paired with MediaPipe real-time 21-point hand tracking (raises hand to verify).</p>
+                                </label>
+                            </div>
+
+                            <!-- Option 3: YOLOv8 Standard Face -->
+                            <div class="col-md-6 col-lg-4">
+                                <input type="radio" class="d-none engine-radio" name="detection_mode" id="mode_v8_face" value="yolov8_face">
+                                <label class="engine-card d-block" for="mode_v8_face">
+                                    <div class="engine-icon"><i class="fas fa-smile"></i></div>
+                                    <div class="engine-title">YOLOv8 Direct Face</div>
+                                    <p class="engine-desc">High-speed instant face recognition without active gesture/blink liveness requirement.</p>
+                                </label>
+                            </div>
+
+                            <!-- Option 4: YOLOv5 Eye Blink -->
+                            <div class="col-md-6 col-lg-4">
+                                <input type="radio" class="d-none engine-radio" name="detection_mode" id="mode_v5_eye" value="yolov5_eye">
+                                <label class="engine-card d-block" for="mode_v5_eye">
+                                    <div class="engine-icon"><i class="fas fa-eye text-info"></i></div>
+                                    <div class="engine-title">YOLOv5 + Eye Blink</div>
+                                    <p class="engine-desc">Proven YOLOv5 architecture with dlib EAR facial blink liveness verification.</p>
+                                </label>
+                            </div>
+
+                            <!-- Option 5: YOLOv5 Hand Gesture -->
+                            <div class="col-md-6 col-lg-4">
+                                <input type="radio" class="d-none engine-radio" name="detection_mode" id="mode_v5_hand" value="yolov5_hand">
+                                <label class="engine-card d-block" for="mode_v5_hand">
+                                    <div class="engine-icon"><i class="fas fa-hand-paper text-info"></i></div>
+                                    <div class="engine-title">YOLOv5 + Hand Gesture</div>
+                                    <p class="engine-desc">YOLOv5 object detector combined with MediaPipe hand landmark tracking.</p>
+                                </label>
+                            </div>
+
+                            <!-- Option 6: YOLOv5 Standard Face -->
+                            <div class="col-md-6 col-lg-4">
+                                <input type="radio" class="d-none engine-radio" name="detection_mode" id="mode_v5_face" value="yolov5_face">
+                                <label class="engine-card d-block" for="mode_v5_face">
+                                    <div class="engine-icon"><i class="fas fa-user-tag text-info"></i></div>
+                                    <div class="engine-title">YOLOv5 Direct Face</div>
+                                    <p class="engine-desc">Classic YOLOv5 face recognition pipeline for standard check-in.</p>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg fw-bold shadow">
+                                <i class="fas fa-play me-2"></i>Launch Camera & Start Taking Attendance
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
-        <button onclick="location.href='/save_attendance'" class="btn btn-success mt-3 w-100">Save Attendance</button>
+        {% endif %}
+
+        <!-- Live Attendance Tracking Screen -->
+        {% if class_name %}
+        <div class="row g-4">
+            <!-- Video Streaming Column -->
+            <div class="col-lg-8">
+                <div class="video-container">
+                    <div class="live-badge">
+                        <div class="pulsing-dot"></div> LIVE
+                    </div>
+                    <div class="engine-badge-live">
+                        <i class="fas fa-microchip me-1"></i> {{ mode_name }}
+                    </div>
+                    <img src="{{ url_for('video_feed', mode=detection_mode) }}" class="video-feed" alt="Camera Feed">
+                </div>
+
+                <div class="d-flex gap-3 mt-3">
+                    <a href="{{ url_for('save_attendance') }}" class="btn btn-success btn-lg flex-grow-1 fw-bold shadow">
+                        <i class="fas fa-save me-2"></i>Save Attendance & Exit
+                    </a>
+                    <a href="{{ url_for('take_attendance') }}" class="btn btn-warning btn-lg fw-bold text-dark shadow">
+                        <i class="fas fa-redo me-2"></i>Change Mode / Restart
+                    </a>
+                </div>
+            </div>
+
+            <!-- Real-time Attendance Sidebar -->
+            <div class="col-lg-4">
+                <div class="attendance-sidebar">
+                    <div class="d-flex justify-content-between align-items-center pb-2 border-bottom border-primary">
+                        <div>
+                            <h5 class="fw-bold mb-0">
+                                <i class="fas fa-clipboard-check me-2"></i>Class: {{ class_name }}
+                                {% if is_substitute %}
+                                <span class="badge bg-warning text-dark fs-6 ms-2"><i class="fas fa-user-clock me-1"></i>Substitute Session</span>
+                                {% endif %}
+                            </h5>
+                            <small class="text-light opacity-75">Instructor: {{ teacher_name }}</small>
+                        </div>
+                        <span id="record-count" class="badge bg-success rounded-pill px-3 py-2 fs-6">0 Present</span>
+                    </div>
+
+                    <div id="attendance-list" class="attendance-list-container">
+                        <div class="text-center text-light opacity-75 py-5" id="empty-state">
+                            <i class="fas fa-user-clock fs-1 mb-3"></i>
+                            <p>Waiting for students to be recognized...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         {% endif %}
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleClassInput() {
+            const select = document.getElementById('classSelect');
+            const customBox = document.getElementById('customClassContainer');
+            const customInput = document.getElementById('customClassInput');
+            if (select && customBox) {
+                if (select.value === '__CUSTOM__') {
+                    customBox.classList.remove('d-none');
+                    if (customInput) customInput.focus();
+                } else {
+                    customBox.classList.add('d-none');
+                }
+            }
+        }
+    </script>
+    {% if class_name %}
+    <script>
+        function updateAttendanceFeed() {
+            fetch('/get_attendance')
+                .then(res => res.json())
+                .then(data => {
+                    const listElem = document.getElementById('attendance-list');
+                    const countElem = document.getElementById('record-count');
+                    
+                    if (data && data.length > 0) {
+                        countElem.innerText = `${data.length} Present`;
+                        listElem.innerHTML = data.map(record => `
+                            <div class="student-item animate__animated animate__fadeIn">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="student-name">${record.Name}</span>
+                                    <span class="badge bg-light text-dark font-monospace">${record.ID}</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-1 student-meta">
+                                    <span><i class="far fa-clock me-1"></i>${record.Time.split(' ')[1] || record.Time}</span>
+                                    <span class="text-info">${record.Verification_Mode || 'Verified'}</span>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                })
+                .catch(err => console.error("Error fetching live attendance:", err));
+        }
+
+        // Poll every 3 seconds for live table updates
+        setInterval(updateAttendanceFeed, 3000);
+        updateAttendanceFeed();
+    </script>
+    {% endif %}
 </body>
 </html>

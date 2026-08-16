@@ -3,64 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>See Attendance</title>
+    <title>Attendance Records & Analytics</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
             background: linear-gradient(135deg, #004d40, #00796b);
             color: #fff;
-            font-family: 'Arial', sans-serif;
-            overflow-x: hidden; /* Prevent horizontal scrolling */
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            padding-bottom: 50px;
         }
 
         .navbar {
-            background-color: #004d40;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: rgba(0, 77, 64, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
 
         .navbar-brand {
-            font-weight: bold;
-            color: #fff;
+            font-weight: 700;
+            color: #fff !important;
         }
 
-        .container {
-            margin-top: 50px;
-        }
-
-        .card {
-            background: rgba(255, 255, 255, 0.95);
+        .card-custom {
+            background: rgba(255, 255, 255, 0.97);
             border: none;
-            border-radius: 15px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-            color: #004d40;
+            border-radius: 16px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+            color: #212529;
+            padding: 26px;
         }
 
-        .card-header {
-            background: #00796b;
-            color: #fff;
-            border-radius: 15px 15px 0 0;
-            font-weight: bold;
-        }
-
-        .btn-primary {
+        .btn-teal {
             background-color: #00796b;
-            border: none;
+            border-color: #00796b;
+            color: #fff;
+            font-weight: 600;
         }
 
-        .btn-primary:hover {
+        .btn-teal:hover {
             background-color: #004d40;
+            border-color: #004d40;
+            color: #fff;
         }
 
-        .list-group-item {
-            border: none;
-            border-bottom: 1px solid #ddd;
+        .stat-card {
+            border-radius: 12px;
+            padding: 16px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
-        .list-group-item:last-child {
-            border-bottom: none;
+        .stat-card.blue { background: linear-gradient(135deg, #1976d2, #2196f3); }
+        .stat-card.green { background: linear-gradient(135deg, #2e7d32, #43a047); }
+        .stat-card.red { background: linear-gradient(135deg, #c62828, #e53935); }
+        .stat-card.purple { background: linear-gradient(135deg, #6a1b9a, #8e24aa); }
+
+        .stat-val {
+            font-size: 1.8rem;
+            font-weight: 800;
+            line-height: 1;
         }
 
+        .stat-label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+
+        .table-custom {
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .table-custom th {
+            background-color: #004d40;
+            color: #fff;
+            padding: 12px 16px;
+        }
+
+        .table-custom td {
+            padding: 12px 16px;
+            vertical-align: middle;
+        }
+
+        .badge-mode {
+            background: #e0f2f1;
+            color: #00796b;
+            border: 1px solid #b2dfdb;
+            font-weight: 600;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+        }
+
+        .nav-tabs .nav-link {
+            font-weight: 700;
+            color: #555;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #00796b;
+            border-color: #dee2e6 #dee2e6 #fff;
+        }
+
+        /* Background Animation */
         .background-animation {
             position: fixed;
             top: 0;
@@ -71,185 +124,351 @@
             overflow: hidden;
         }
 
-        .background-animation .shape {
+        .shape {
             position: absolute;
-            background: rgba(255, 255, 255, 0.1);
-            animation: float 10s infinite ease-in-out;
-        }
-
-        .background-animation .shape.circle {
-            width: 150px;
-            height: 150px;
+            background: rgba(255, 255, 255, 0.06);
             border-radius: 50%;
-            top: 10%;
-            left: 20%;
-            animation-duration: 12s;
+            animation: float 14s infinite ease-in-out;
         }
 
-        .background-animation .shape.square {
-            width: 100px;
-            height: 100px;
-            top: 50%;
-            left: 70%;
-            animation-duration: 15s;
-        }
-
-        .background-animation .shape.triangle {
-            width: 0;
-            height: 0;
-            border-left: 50px solid transparent;
-            border-right: 50px solid transparent;
-            border-bottom: 100px solid rgba(255, 255, 255, 0.1);
-            top: 70%;
-            left: 30%;
-            animation-duration: 18s;
-        }
-
-        .background-animation .shape.ellipse {
-            width: 200px;
-            height: 100px;
-            border-radius: 50%;
-            top: 40%;
-            left: 10%;
-            background: rgba(255, 255, 255, 0.15);
-            animation-duration: 14s;
-        }
-
-        .background-animation .shape.hexagon {
-            width: 100px;
-            height: 100px;
-            background: rgba(255, 255, 255, 0.1);
-            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-            top: 20%;
-            left: 80%;
-            animation-duration: 16s;
-        }
-
-        .background-animation .shape.star {
-            width: 0;
-            height: 0;
-            border-left: 30px solid transparent;
-            border-right: 30px solid transparent;
-            border-bottom: 60px solid rgba(255, 255, 255, 0.1);
-            position: relative;
-            top: 60%;
-            left: 50%;
-            animation-duration: 20s;
-        }
-
-        .background-animation .shape.star:before {
-            content: '';
-            position: absolute;
-            top: 18px;
-            left: -30px;
-            width: 0;
-            height: 0;
-            border-left: 30px solid transparent;
-            border-right: 30px solid transparent;
-            border-top: 60px solid rgba(255, 255, 255, 0.1);
-        }
+        .shape:nth-child(1) { width: 200px; height: 200px; top: 15%; left: 10%; animation-duration: 15s; }
+        .shape:nth-child(2) { width: 280px; height: 280px; top: 60%; left: 70%; animation-duration: 20s; }
 
         @keyframes float {
-            0% {
-                transform: translateY(0) translateX(0);
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-25px); }
+            100% { transform: translateY(0); }
+        }
+
+        @media print {
+            .navbar, .search-section, .export-bar, .background-animation {
+                display: none !important;
             }
-            50% {
-                transform: translateY(-20px) translateX(20px);
+            body {
+                background: #fff !important;
+                color: #000 !important;
+                padding: 0;
             }
-            100% {
-                transform: translateY(0) translateX(0);
+            .card-custom {
+                box-shadow: none !important;
+                border: 1px solid #ddd !important;
+                padding: 0 !important;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Background Animation -->
     <div class="background-animation">
-        <div class="shape circle"></div>
-        <div class="shape square"></div>
-        <div class="shape triangle"></div>
-        <div class="shape ellipse"></div>
-        <div class="shape hexagon"></div>
-        <div class="shape star"></div>
+        <div class="shape"></div>
+        <div class="shape"></div>
     </div>
 
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/">
-                <i class="fas fa-home"></i> Attendance System
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('home') }}">
+                <i class="fas fa-calendar-check me-2"></i> Attendance Records & Analytics
             </a>
+            <div class="ms-auto d-flex gap-2">
+                <a href="{{ url_for('home') }}" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-home me-1"></i> Home
+                </a>
+                <a href="{{ url_for('take_attendance') }}" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-video me-1"></i> Take Attendance
+                </a>
+                <a href="{{ url_for('register_student') }}" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-user-plus me-1"></i> Register Student
+                </a>
+            </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
     <div class="container">
-        <h2 class="text-center mb-4">See Attendance</h2>
+        <div class="row justify-content-center">
+            <div class="col-lg-11">
+                <!-- Search Card -->
+                <div class="card-custom mb-4 search-section">
+                    <div class="text-center mb-4">
+                        <h2 class="fw-bold text-success"><i class="fas fa-search me-2"></i>Search Attendance Sessions</h2>
+                        <p class="text-muted">Find attendance logs by instructor, class, and date.</p>
+                    </div>
 
-        <!-- Form Section -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <i class="fas fa-search icon"></i> Search Attendance
-            </div>
-            <div class="card-body">
-                <form method="POST">
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label for="teacher_name" class="form-label">Teacher Name</label>
-                            <input type="text" class="form-control" id="teacher_name" name="teacher_name" value="{{ session['username'] }}" readonly>
+                    <form method="POST" action="{{ url_for('see_attendance') }}">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-secondary">Teacher</label>
+                                <input type="text" class="form-control bg-light" name="teacher_name" value="{{ session['username'] }}" readonly>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-secondary">Class / Section <span class="text-danger">*</span></label>
+                                <select class="form-select" name="class_select" id="seeClassSelect" onchange="toggleSeeClassInput()" required>
+                                    {% if assigned_classes %}
+                                    <optgroup label="🌟 My Assigned Classes">
+                                        {% for c in assigned_classes %}
+                                        <option value="{{ c }}" {% if class_name == c %}selected{% endif %}>{{ c }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    {% endif %}
+
+                                    {% if all_classes %}
+                                    <optgroup label="🏫 Other Institutional Classes">
+                                        {% for c in all_classes %}
+                                            {% if not assigned_classes or c.code not in assigned_classes %}
+                                            <option value="{{ c.code }}" {% if class_name == c.code %}selected{% endif %}>{{ c.code }} - {{ c.name }}</option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </optgroup>
+                                    {% endif %}
+
+                                    <option value="__CUSTOM__" {% if class_name and ((not assigned_classes or class_name not in assigned_classes) and (not all_classes or class_name not in all_classes|map(attribute='code'))) %}selected{% endif %}>
+                                        ➕ Other / Search Custom...
+                                    </option>
+                                </select>
+
+                                <div id="seeCustomClassBox" class="mt-2 {% if not class_name or (assigned_classes and class_name in assigned_classes) or (all_classes and class_name in all_classes|map(attribute='code')) %}d-none{% endif %}">
+                                    <input type="text" class="form-control form-control-sm" name="custom_class" id="seeCustomClassInput" value="{{ class_name if (not assigned_classes or class_name not in assigned_classes) and (not all_classes or class_name not in all_classes|map(attribute='code')) else '' }}" placeholder="Enter custom class code">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-secondary">Date <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" name="date" required>
+                            </div>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="class_name" class="form-label">Class</label>
-                            <input type="text" class="form-control" id="class_name" name="class_name" required>
+
+                        <div class="d-flex gap-3 mt-4">
+                            <button type="submit" class="btn btn-teal flex-grow-1 py-2 fs-6 shadow">
+                                <i class="fas fa-search me-2"></i>Find Attendance Files
+                            </button>
+                            <a href="{{ url_for('see_attendance') }}" class="btn btn-secondary py-2">
+                                <i class="fas fa-undo me-1"></i>Reset
+                            </a>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="date" class="form-label">Date</label>
-                            <input type="date" class="form-control" id="date" name="date" required>
+                    </form>
+                </div>
+
+                <!-- CSV File Picker -->
+                {% if csv_files %}
+                <div class="card-custom mb-4 search-section">
+                    <h5 class="fw-bold text-dark mb-3"><i class="fas fa-file-csv text-success me-2"></i>Select Session File ({{ csv_files|length }} found)</h5>
+                    <form method="POST" action="{{ url_for('view_attendance') }}">
+                        <input type="hidden" name="class_name" value="{{ class_name }}">
+                        <input type="hidden" name="date" value="{{ date }}">
+                        
+                        <div class="input-group">
+                            <select name="csv_file" class="form-select form-select-lg">
+                                {% for file in csv_files %}
+                                    <option value="{{ file }}" {% if file == csv_file %}selected{% endif %}>{{ file }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-success fw-bold px-4">
+                                <i class="fas fa-eye me-2"></i>Load Log & Analytics
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                {% elif request.method == 'POST' and not csv_files %}
+                <div class="alert alert-warning card-custom text-center py-4 mb-4">
+                    <i class="fas fa-exclamation-triangle fs-3 text-warning mb-2 d-block"></i>
+                    <h5 class="fw-bold mb-1">No attendance files found for this date.</h5>
+                    <p class="text-muted mb-0">Check the class name or date and try again.</p>
+                </div>
+                {% endif %}
+
+                <!-- Analytics & Tables -->
+                {% if attendance_records is defined and csv_file %}
+                <div class="card-custom">
+                    <!-- Session Header & Export Actions -->
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3 border-bottom pb-3">
+                        <div>
+                            <h4 class="fw-bold text-dark mb-0"><i class="fas fa-clipboard-list text-primary me-2"></i>Attendance Report</h4>
+                            <small class="text-muted">Class / Section: <strong class="badge bg-primary fs-6">{{ class_name }}</strong> | File: <code>{{ csv_file }}</code></small>
+                        </div>
+                        <div class="d-flex gap-2 export-bar">
+                            <button class="btn btn-outline-success fw-bold btn-sm" onclick="exportToCSV()">
+                                <i class="fas fa-file-download me-1"></i> Export CSV
+                            </button>
+                            <button class="btn btn-outline-primary fw-bold btn-sm" onclick="window.print()">
+                                <i class="fas fa-print me-1"></i> Print / PDF Report
+                            </button>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">See Attendance</button>
-                </form>
-                <div class="text-center mt-3">
-                    <a href="{{ url_for('see_attendance') }}" class="btn btn-secondary w-100">Restart</a>
-                </div>
-            </div>
-        </div>
 
-        <!-- Available CSV Files -->
-        {% if csv_files %}
-        <h2>Select a CSV File</h2>
-        <form method="POST" action="{{ url_for('view_attendance') }}">
-            <input type="hidden" name="teacher_name" value="{{ session['username'] }}">
-            <input type="hidden" name="class_name" value="{{ class_name }}">
-            <input type="hidden" name="date" value="{{ date }}">
-            <select name="csv_file" class="form-select mb-3">
-                {% for file in csv_files %}
-                    <option value="{{ file }}">{{ file }}</option>
-                {% endfor %}
-            </select>
-            <button type="submit" class="btn btn-success">View Attendance</button>
-        </form>
-        {% endif %}
+                    <!-- Statistics Metric Cards -->
+                    {% if stats %}
+                    <div class="row g-3 mb-4">
+                        <div class="col-6 col-md-3">
+                            <div class="stat-card blue">
+                                <div>
+                                    <div class="stat-val">{{ stats.total_registered }}</div>
+                                    <div class="stat-label">Class Enrollment</div>
+                                </div>
+                                <i class="fas fa-users fs-2 opacity-50"></i>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="stat-card green">
+                                <div>
+                                    <div class="stat-val">{{ stats.total_present }}</div>
+                                    <div class="stat-label">Present</div>
+                                </div>
+                                <i class="fas fa-user-check fs-2 opacity-50"></i>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="stat-card red">
+                                <div>
+                                    <div class="stat-val">{{ stats.total_absent }}</div>
+                                    <div class="stat-label">Absent</div>
+                                </div>
+                                <i class="fas fa-user-times fs-2 opacity-50"></i>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="stat-card purple">
+                                <div>
+                                    <div class="stat-val">{{ stats.attendance_rate }}%</div>
+                                    <div class="stat-label">Turnout Rate</div>
+                                </div>
+                                <i class="fas fa-chart-pie fs-2 opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
 
-        <!-- Attendance Records -->
-        {% if attendance_records %}
-        <div class="card mb-4 mt-4">
-            <div class="card-header">
-                <i class="fas fa-list icon"></i> Attendance Records
-            </div>
-            <div class="card-body">
-                <ul class="list-group">
-                    {% for record in attendance_records %}
-                        <li class="list-group-item">
-                            <strong>{{ record.Name }}</strong> ({{ record.ID }}) - {{ record.Time }}
+                    <!-- Tabs: Present vs Absent -->
+                    <ul class="nav nav-tabs mb-3" id="reportTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="present-tab" data-bs-toggle="tab" data-bs-target="#present-content" type="button" role="tab">
+                                <i class="fas fa-check-circle text-success me-1"></i> Present Students ({{ attendance_records|length }})
+                            </button>
                         </li>
-                    {% endfor %}
-                </ul>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="absent-tab" data-bs-toggle="tab" data-bs-target="#absent-content" type="button" role="tab">
+                                <i class="fas fa-times-circle text-danger me-1"></i> Absent Students ({{ absent_records|length }})
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="reportTabsContent">
+                        <!-- Present Tab Content -->
+                        <div class="tab-pane fade show active" id="present-content" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-custom align-middle" id="presentTable">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Student Name</th>
+                                            <th>Student ID</th>
+                                            <th>Class / Section</th>
+                                            <th>Time Marked</th>
+                                            <th>Verification Method</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for record in attendance_records %}
+                                        <tr>
+                                            <td class="text-muted">{{ loop.index }}</td>
+                                            <td class="fw-bold text-dark">{{ record.Name }}</td>
+                                            <td><span class="badge bg-secondary font-monospace">{{ record.ID }}</span></td>
+                                            <td><span class="badge bg-light text-dark border">{{ record.Class if record.Class else class_name }}</span></td>
+                                            <td><i class="far fa-clock me-1 text-muted"></i>{{ record.Time }}</td>
+                                            <td>
+                                                <span class="badge-mode">
+                                                    <i class="fas fa-shield-alt me-1"></i>{{ record.Verification_Mode }}
+                                                </span>
+                                            </td>
+                                            <td><span class="badge bg-success">Present</span></td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted py-3">No present records found in this file.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Absent Tab Content -->
+                        <div class="tab-pane fade" id="absent-content" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-custom align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Student Name</th>
+                                            <th>Student ID</th>
+                                            <th>Class / Section</th>
+                                            <th>Email / Contact</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for student in absent_records %}
+                                        <tr>
+                                            <td class="text-muted">{{ loop.index }}</td>
+                                            <td class="fw-bold text-danger">{{ student.name }}</td>
+                                            <td><span class="badge bg-secondary font-monospace">{{ student.id }}</span></td>
+                                            <td><span class="badge bg-light text-dark border">{{ student.class_name }}</span></td>
+                                            <td><small class="text-muted">{{ student.email }}</small></td>
+                                            <td><span class="badge bg-danger">Absent</span></td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="6" class="text-center text-success py-3">🎉 100% Attendance! No absent students in this class.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
-        {% endif %}
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleSeeClassInput() {
+            const select = document.getElementById('seeClassSelect');
+            const customBox = document.getElementById('seeCustomClassBox');
+            const customInput = document.getElementById('seeCustomClassInput');
+            if (select && customBox) {
+                if (select.value === '__CUSTOM__') {
+                    customBox.classList.remove('d-none');
+                    if (customInput) customInput.focus();
+                } else {
+                    customBox.classList.add('d-none');
+                }
+            }
+        }
+
+        function exportToCSV() {
+            const table = document.getElementById("presentTable");
+            if (!table) return;
+
+            let csv = [];
+            for (let i = 0; i < table.rows.length; i++) {
+                let row = [], cols = table.rows[i].querySelectorAll("td, th");
+                for (let j = 0; j < cols.length; j++) {
+                    let text = cols[j].innerText.replace(/"/g, '""').trim();
+                    row.push('"' + text + '"');
+                }
+                csv.push(row.join(","));
+            }
+
+            const csvFile = new Blob([csv.join("\n")], { type: "text/csv" });
+            const downloadLink = document.createElement("a");
+            downloadLink.download = "Attendance_Report_{{ class_name }}_{{ date }}.csv";
+            downloadLink.href = window.URL.createObjectURL(csvFile);
+            downloadLink.style.display = "none";
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+    </script>
 </body>
 </html>

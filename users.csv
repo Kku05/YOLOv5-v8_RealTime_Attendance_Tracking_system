@@ -1,6 +1,4 @@
-username,user_id
-tirth,AB1234CD
-tirthnarwal10@gmail.com,AB1234CD
-vishal,XY5678EF
-ayush,GH9012IJ
-deepak sir,1234QWER
+username,user_id,assigned_classes,role
+admin,admin123,ALL,Administrator
+tirth,AB1234CD,CSE-AIML;CSE-4A,Lead Instructor
+teacher,1234,IT-A;Grade-11,Faculty

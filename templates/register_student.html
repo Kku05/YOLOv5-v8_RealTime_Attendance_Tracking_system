@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Student - Complete Profile</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: #fff;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            padding-bottom: 50px;
+        }
+
+        .navbar {
+            background-color: rgba(30, 60, 114, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            color: #fff !important;
+        }
+
+        .card-custom {
+            background: rgba(255, 255, 255, 0.97);
+            color: #212529;
+            border-radius: 16px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+            border: none;
+            padding: 28px;
+        }
+
+        .camera-box {
+            position: relative;
+            background: #111;
+            border-radius: 12px;
+            overflow: hidden;
+            width: 100%;
+            height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #webcam-video,
+        #snapshot-canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+
+        .student-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #1e3c72;
+        }
+
+        .table-custom th {
+            background-color: #1e3c72;
+            color: #fff;
+            padding: 12px 14px;
+            font-size: 0.9rem;
+        }
+
+        .table-custom td {
+            padding: 12px 14px;
+            vertical-align: middle;
+            font-size: 0.9rem;
+        }
+
+        .nav-pills .nav-link {
+            border-radius: 10px;
+            font-weight: 600;
+            color: #1e3c72;
+        }
+
+        .nav-pills .nav-link.active {
+            background-color: #1e3c72;
+            color: #fff;
+        }
+
+        /* Background Animation */
+        .background-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .shape {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 50%;
+            animation: float 14s infinite ease-in-out;
+        }
+
+        .shape:nth-child(1) {
+            width: 200px;
+            height: 200px;
+            top: 10%;
+            left: 10%;
+            animation-duration: 15s;
+        }
+
+        .shape:nth-child(2) {
+            width: 260px;
+            height: 260px;
+            top: 60%;
+            left: 75%;
+            animation-duration: 20s;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-25px);
+            }
+
+            100% {
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="background-animation">
+        <div class="shape"></div>
+        <div class="shape"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('home') }}">
+                <i class="fas fa-id-card me-2"></i> Student Face & Profile Registry
+            </a>
+            <div class="ms-auto d-flex gap-2">
+                <a href="{{ url_for('home') }}" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-home me-1"></i> Home
+                </a>
+                <a href="{{ url_for('take_attendance') }}" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-video me-1"></i> Take Attendance
+                </a>
+                <a href="{{ url_for('see_attendance') }}" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-table me-1"></i> Records
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Alerts -->
+        {% if success_msg %}
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fas fa-check-circle me-2"></i> {{ success_msg }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+
+        {% if error_msg %}
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i> {{ error_msg }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+
+        <div class="row g-4">
+            <!-- Registration Form -->
+            <div class="col-lg-5">
+                <div class="card-custom">
+                    <h4 class="fw-bold text-primary mb-2"><i class="fas fa-user-plus me-2"></i>Enroll Student Profile
+                    </h4>
+                    <p class="text-muted small mb-3">Provide complete student identifying details and a clear frontal
+                        photo.</p>
+
+                    <form method="POST" action="{{ url_for('register_student') }}" enctype="multipart/form-data"
+                        id="registerForm">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-secondary">Student Full Name <span
+                                    class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="name" placeholder="e.g., Tirth" required>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-bold small text-secondary">Roll / Student ID <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="id" placeholder="e.g., 2821333" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-bold small text-secondary">Class / Section <span
+                                        class="text-danger">*</span></label>
+                                <select class="form-select form-select-sm" name="class_select" id="classSelectRegister" onchange="toggleRegisterClassInput()" required>
+                                    {% if classes %}
+                                        {% for c in classes %}
+                                        <option value="{{ c.code }}">{{ c.code }} ({{ c.name }})</option>
+                                        {% endfor %}
+                                    {% endif %}
+                                    <option value="__NEW__">➕ Add / Create New Class...</option>
+                                </select>
+                                <div id="newClassBox" class="mt-2 d-none">
+                                    <input type="text" class="form-control form-control-sm" name="custom_class" id="customClassRegister" placeholder="Enter new class code (e.g. CSE-AIML)">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-secondary">Student Email / Contact
+                                (Optional)</label>
+                            <input type="email" class="form-control" name="email"
+                                placeholder="e.g., student@school.edu">
+                        </div>
+
+                        <!-- Photo Capture Tabs -->
+                        <label class="form-label fw-bold small text-secondary mb-2">Student Portrait Photo <span
+                                class="text-danger">*</span></label>
+                        <ul class="nav nav-pills mb-2 nav-fill" id="pills-tab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active py-1 small" id="pills-camera-tab" data-bs-toggle="pill"
+                                    data-bs-target="#pills-camera" type="button" role="tab">
+                                    <i class="fas fa-camera me-1"></i> Live Webcam
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link py-1 small" id="pills-upload-tab" data-bs-toggle="pill"
+                                    data-bs-target="#pills-upload" type="button" role="tab">
+                                    <i class="fas fa-upload me-1"></i> Upload File
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content" id="pills-tabContent">
+                            <!-- Live Webcam Tab -->
+                            <div class="tab-pane fade show active" id="pills-camera" role="tabpanel">
+                                <div class="camera-box mb-2">
+                                    <video id="webcam-video" autoplay playsinline></video>
+                                    <canvas id="snapshot-canvas" class="d-none"></canvas>
+                                </div>
+                                <input type="hidden" name="webcam_image" id="webcam_image_input">
+                                <div class="d-flex gap-2">
+                                    <button type="button" id="snap-btn" class="btn btn-primary btn-sm flex-grow-1"
+                                        onclick="takeSnapshot()">
+                                        <i class="fas fa-camera me-1"></i> Snap Photo
+                                    </button>
+                                    <button type="button" id="retake-btn" class="btn btn-secondary btn-sm d-none"
+                                        onclick="retakePhoto()">
+                                        <i class="fas fa-redo me-1"></i> Retake
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Upload File Tab -->
+                            <div class="tab-pane fade" id="pills-upload" role="tabpanel">
+                                <div class="mb-2">
+                                    <input class="form-control form-control-sm" type="file" name="file_image"
+                                        accept="image/jpeg,image/png,image/jpg">
+                                    <div class="form-text small">Accepted formats: JPG, PNG, JPEG.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-success btn-lg w-100 fw-bold mt-3 shadow">
+                            <i class="fas fa-user-check me-2"></i>Save & Index Student
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Registered Students List -->
+            <div class="col-lg-7">
+                <div class="card-custom">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h4 class="fw-bold text-dark mb-0"><i class="fas fa-users me-2 text-primary"></i>Student
+                                Directory</h4>
+                            <small class="text-muted">Total Enrolled: <strong>{{ total_students }}</strong></small>
+                        </div>
+                        <input type="text" id="filterInput" class="form-control form-control-sm w-auto"
+                            placeholder="🔍 Search name, ID or class..." onkeyup="filterTable()">
+                    </div>
+
+                    <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+                        <table class="table table-hover table-custom align-middle" id="studentTable">
+                            <thead>
+                                <tr>
+                                    <th>Photo</th>
+                                    <th>Student Details</th>
+                                    <th>Class / Section</th>
+                                    <th>Email / Contact</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for student in students %}
+                                <tr>
+                                    <td>
+                                        <img src="/{{ student.image_path }}" class="student-avatar"
+                                            alt="{{ student.name }}" onerror="this.src='/static/home.png'">
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-dark">{{ student.name }}</div>
+                                        <small class="badge bg-secondary font-monospace">{{ student.id }}</small>
+                                    </td>
+                                    <td><span class="badge bg-info text-dark">{{ student.class_name }}</span></td>
+                                    <td><small class="text-muted">{{ student.email }}</small></td>
+                                    <td>
+                                        <form method="POST"
+                                            action="{{ url_for('delete_student', student_id=student.id) }}"
+                                            onsubmit="return confirm('Remove student {{ student.name }} ({{ student.id }})?');">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                title="Remove Profile">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">No students enrolled yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const video = document.getElementById('webcam-video');
+        const canvas = document.getElementById('snapshot-canvas');
+        const snapBtn = document.getElementById('snap-btn');
+        const retakeBtn = document.getElementById('retake-btn');
+        const webcamInput = document.getElementById('webcam_image_input');
+        let stream = null;
+
+        function toggleRegisterClassInput() {
+            const select = document.getElementById('classSelectRegister');
+            const newBox = document.getElementById('newClassBox');
+            const customInput = document.getElementById('customClassRegister');
+            if (select && newBox) {
+                if (select.value === '__NEW__') {
+                    newBox.classList.remove('d-none');
+                    if (customInput) {
+                        customInput.required = true;
+                        customInput.focus();
+                    }
+                } else {
+                    newBox.classList.add('d-none');
+                    if (customInput) customInput.required = false;
+                }
+            }
+        }
+
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+                video.srcObject = stream;
+            } catch (err) {
+                console.warn("Could not access webcam:", err);
+            }
+        }
+
+        function takeSnapshot() {
+            if (!video.videoWidth) return;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+            webcamInput.value = dataUrl;
+
+            video.classList.add('d-none');
+            canvas.classList.remove('d-none');
+            snapBtn.classList.add('d-none');
+            retakeBtn.classList.remove('d-none');
+        }
+
+        function retakePhoto() {
+            webcamInput.value = '';
+            canvas.classList.add('d-none');
+            video.classList.remove('d-none');
+            retakeBtn.classList.add('d-none');
+            snapBtn.classList.remove('d-none');
+        }
+
+        function filterTable() {
+            const query = document.getElementById('filterInput').value.toLowerCase();
+            const rows = document.querySelectorAll('#studentTable tbody tr');
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(query) ? '' : 'none';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', startCamera);
+    </script>
+</body>
+
+</html>
