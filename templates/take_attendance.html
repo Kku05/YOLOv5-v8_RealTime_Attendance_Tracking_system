@@ -374,14 +374,21 @@
         <div class="row g-4">
             <!-- Video Streaming Column -->
             <div class="col-lg-8">
-                <div class="video-container">
+                <div class="video-container position-relative">
                     <div class="live-badge">
                         <div class="pulsing-dot"></div> LIVE
                     </div>
                     <div class="engine-badge-live">
                         <i class="fas fa-microchip me-1"></i> {{ mode_name }}
                     </div>
-                    <img src="{{ url_for('video_feed', mode=detection_mode) }}" class="video-feed" alt="Camera Feed">
+                    
+                    <!-- 1. Server-Side Direct OpenCV Video Feed (Local Mac) -->
+                    <img id="serverVideoFeed" src="{{ url_for('video_feed', mode=detection_mode) }}" class="video-feed" alt="Camera Feed" onerror="startBrowserWebcam()">
+
+                    <!-- 2. Client-Side Browser Webcam Fallback (Render Cloud) -->
+                    <video id="clientVideo" autoplay playsinline muted class="d-none"></video>
+                    <img id="clientProcessedFeed" class="video-feed d-none" alt="Live Cloud Processed Feed">
+                    <canvas id="clientCanvas" class="d-none"></canvas>
                 </div>
 
                 <div class="d-flex gap-3 mt-3">
@@ -440,33 +447,90 @@
     </script>
     {% if class_name %}
     <script>
+        let isBrowserWebcamActive = false;
+        let isProcessingFrame = false;
+
+        function renderAttendance(data) {
+            const listElem = document.getElementById('attendance-list');
+            const countElem = document.getElementById('record-count');
+            
+            if (data && data.length > 0) {
+                countElem.innerText = `${data.length} Present`;
+                listElem.innerHTML = data.map(record => `
+                    <div class="student-item animate__animated animate__fadeIn">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="student-name">${record.Name}</span>
+                            <span class="badge bg-light text-dark font-monospace">${record.ID}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-1 student-meta">
+                            <span><i class="far fa-clock me-1"></i>${record.Time.split(' ')[1] || record.Time}</span>
+                            <span class="text-info">${record.Verification_Mode || 'Verified'}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
         function updateAttendanceFeed() {
             fetch('/get_attendance')
                 .then(res => res.json())
-                .then(data => {
-                    const listElem = document.getElementById('attendance-list');
-                    const countElem = document.getElementById('record-count');
-                    
-                    if (data && data.length > 0) {
-                        countElem.innerText = `${data.length} Present`;
-                        listElem.innerHTML = data.map(record => `
-                            <div class="student-item animate__animated animate__fadeIn">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="student-name">${record.Name}</span>
-                                    <span class="badge bg-light text-dark font-monospace">${record.ID}</span>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center mt-1 student-meta">
-                                    <span><i class="far fa-clock me-1"></i>${record.Time.split(' ')[1] || record.Time}</span>
-                                    <span class="text-info">${record.Verification_Mode || 'Verified'}</span>
-                                </div>
-                            </div>
-                        `).join('');
-                    }
-                })
+                .then(data => renderAttendance(data))
                 .catch(err => console.error("Error fetching live attendance:", err));
         }
 
-        // Poll every 1 second for instant live table updates
+        function startBrowserWebcam() {
+            if (isBrowserWebcamActive) return;
+            isBrowserWebcamActive = true;
+            console.log("🌐 Server camera stream unavailable (Cloud/Render environment detected). Launching browser webcam streaming...");
+
+            const serverImg = document.getElementById('serverVideoFeed');
+            const clientVideo = document.getElementById('clientVideo');
+            const clientProcessedImg = document.getElementById('clientProcessedFeed');
+            const clientCanvas = document.getElementById('clientCanvas');
+
+            if (serverImg) serverImg.classList.add('d-none');
+            if (clientProcessedImg) clientProcessedImg.classList.remove('d-none');
+
+            navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
+                .then(stream => {
+                    clientVideo.srcObject = stream;
+                    clientVideo.play();
+
+                    setInterval(() => {
+                        if (isProcessingFrame || !clientVideo.videoWidth) return;
+                        isProcessingFrame = true;
+
+                        clientCanvas.width = clientVideo.videoWidth;
+                        clientCanvas.height = clientVideo.videoHeight;
+                        const ctx = clientCanvas.getContext('2d');
+                        ctx.drawImage(clientVideo, 0, 0, clientCanvas.width, clientCanvas.height);
+                        const dataUrl = clientCanvas.toDataURL('image/jpeg', 0.7);
+
+                        fetch('/process_frame', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ image: dataUrl, mode: "{{ detection_mode }}" })
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data && data.image) {
+                                clientProcessedImg.src = data.image;
+                            }
+                            if (data && data.attendance_data) {
+                                renderAttendance(data.attendance_data);
+                            }
+                        })
+                        .catch(e => console.error("Cloud frame processing error:", e))
+                        .finally(() => { isProcessingFrame = false; });
+                    }, 180);
+                })
+                .catch(err => {
+                    console.error("Camera access error:", err);
+                    alert("Please allow browser camera permissions to stream your video to Render!");
+                });
+        }
+
+        // Poll every 1 second
         setInterval(updateAttendanceFeed, 1000);
         updateAttendanceFeed();
     </script>

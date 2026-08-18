@@ -618,34 +618,175 @@ def get_attendance():
 # ==============================================================================
 # Dynamic Multi-Model Frame Generator with Anti-Spoofing & Duplicate Lockout
 # ==============================================================================
-def generate_frames(mode="yolov8_eye"):
-    global attendance_data, recorded_names, recorded_ids, attendance_filename, last_blink_time
+# ==============================================================================
+# Dynamic Multi-Model Frame Processor with Anti-Spoofing & Duplicate Lockout
+# ==============================================================================
+blink_counter = 0
+blink_detected = False
+eye_was_open = False
+
+def process_single_frame(frame, mode="yolov8_eye"):
+    """Processes a single BGR video frame with YOLO, anti-spoofing and face recognition."""
+    global attendance_data, recorded_names, recorded_ids, last_blink_time, blink_counter, eye_was_open, blink_detected
 
     selected_model = get_yolo_model(mode)
-    dlib_predictor_instance = get_dlib_predictor() if is_eye_mode else None
     is_eye_mode = "eye" in mode
     is_hand_mode = "hand" in mode
+    dlib_predictor_instance = get_dlib_predictor() if is_eye_mode else None
+    mode_label = MODE_DISPLAY_NAMES.get(mode, "Detection Active")
 
+    # Anti-Spoofing Eye Blink Detection
+    if is_eye_mode and dlib_predictor_instance is not None:
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = dlib_detector(gray)
+        for face in faces:
+            landmarks = dlib_predictor_instance(gray, face)
+            left_eye = [(landmarks.part(i).x, landmarks.part(i).y) for i in range(36, 42)]
+            right_eye = [(landmarks.part(i).x, landmarks.part(i).y) for i in range(42, 48)]
+
+            left_ear = calculate_ear(left_eye)
+            right_ear = calculate_ear(right_eye)
+            ear = (left_ear + right_ear) / 2.0
+
+            if ear < EAR_THRESHOLD:
+                blink_counter += 1
+            else:
+                if EAR_CONSECUTIVE_MIN <= blink_counter <= EAR_CONSECUTIVE_MAX and eye_was_open:
+                    current_time = datetime.now()
+                    if (current_time - last_blink_time).total_seconds() > BLINK_TIMEOUT:
+                        blink_detected = True
+                        last_blink_time = current_time
+                blink_counter = 0
+                eye_was_open = True
+
+            for (x, y) in left_eye + right_eye:
+                cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
+
+    # Hand gesture detection
+    hand_detected = False
+    if is_hand_mode and mp_hands is not None:
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        with mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.7) as hands:
+            hand_results = hands.process(rgb_frame)
+            if hand_results.multi_hand_landmarks:
+                for hand_landmarks in hand_results.multi_hand_landmarks:
+                    mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+                    hand_detected = True
+
+    # YOLO object/face detection
+    boxes = []
+    confidences = []
+
+    if selected_model is not None:
+        results = selected_model(frame, verbose=False)
+        for result in results:
+            for box in result.boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                confidence = float(box.conf[0])
+                class_id = int(box.cls[0])
+
+                if confidence > 0.45 and class_id == 0:
+                    boxes.append([x1, y1, x2 - x1, y2 - y1])
+                    confidences.append(confidence)
+
+    # Robust Fallback: If close-up face has no YOLO body detection, use frontal face detector
+    if len(boxes) == 0 and dlib_detector is not None:
+        gray_f = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        d_faces = dlib_detector(gray_f, 0)
+        for df in d_faces:
+            fx1, fy1, fx2, fy2 = df.left(), df.top(), df.right(), df.bottom()
+            boxes.append([fx1, fy1, fx2 - fx1, fy2 - fy1])
+            confidences.append(0.95)
+
+    indices = cv2.dnn.NMSBoxes(boxes, confidences, score_threshold=0.3, nms_threshold=0.3)
+
+    for i in indices:
+        box = boxes[i]
+        x1, y1, w, h = box
+        x2 = min(frame.shape[1], max(0, x1 + w))
+        y2 = min(frame.shape[0], max(0, y1 + h))
+        x1 = max(0, x1)
+        y1 = max(0, y1)
+
+        face_roi = frame[y1:y2, x1:x2]
+        if face_roi.size == 0 or face_roi.shape[0] < 20 or face_roi.shape[1] < 20:
+            continue
+
+        rgb_face_roi = cv2.cvtColor(face_roi, cv2.COLOR_BGR2RGB)
+        face_encodings = face_recognition.face_encodings(rgb_face_roi)
+        if not face_encodings:
+            continue
+
+        face_encoding = face_encodings[0]
+        name, uid, cname = "Unknown", "Unknown", "Unknown"
+        if face_encodings_tree is not None:
+            dist_val, ind = face_encodings_tree.query([face_encoding], k=1)
+            best_match_index = ind[0][0]
+            if dist_val[0][0] < 0.65:
+                name = known_face_names[best_match_index]
+                uid = known_face_ids[best_match_index]
+                cname = known_face_classes[best_match_index] if best_match_index < len(known_face_classes) else 'N/A'
+
+        # Liveness evaluation
+        is_liveness_verified = False
+        if is_eye_mode:
+            is_liveness_verified = blink_detected
+        elif is_hand_mode:
+            is_liveness_verified = hand_detected
+        else:
+            is_liveness_verified = True
+
+        # Anti-Spoofing & Duplicate Lockout
+        if name != "Unknown" and is_liveness_verified:
+            student_class = cname if cname != 'Unknown' else session.get('active_class', 'N/A')
+            label = f"{name} ({uid})"
+
+            if uid not in recorded_ids and name not in recorded_names:
+                timestamp_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                attendance_data.append({
+                    'Name': name,
+                    'ID': uid,
+                    'Class': student_class,
+                    'Time': timestamp_now,
+                    'Verification_Mode': mode_label
+                })
+                recorded_names.add(name)
+                recorded_ids.add(uid)
+                if is_eye_mode:
+                    blink_detected = False
+        else:
+            label = name
+
+        is_known = (name != "Unknown")
+        is_already_marked = (uid in recorded_ids)
+
+        if is_already_marked:
+            color = (255, 191, 0)
+            label += " [PRESENT]"
+        elif is_known and is_liveness_verified:
+            color = (0, 255, 0)
+            label += " [LIVENESS VERIFIED]"
+        elif is_known and not is_liveness_verified:
+            color = (0, 165, 255)
+            label += " [BLINK / GESTURE REQUIRED]"
+        else:
+            color = (0, 0, 255)
+
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+        cv2.putText(frame, label, (x1, max(15, y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 2)
+
+    # Mode banner overlay on video
+    cv2.putText(frame, f"Engine: {mode_label}", (20, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+    return frame
+
+def generate_frames(mode="yolov8_eye"):
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
         cap = cv2.VideoCapture(1)
 
-    frame_width = 1280
-    frame_height = 720
-    frame_rate = 30
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_height)
-    cap.set(cv2.CAP_PROP_FPS, frame_rate)
-
-    blink_counter = 0
-    blink_detected = False
-    eye_was_open = False
-
-    hands = None
-    if is_hand_mode and mp_hands is not None:
-        hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.7)
-
-    mode_label = MODE_DISPLAY_NAMES.get(mode, "Detection Active")
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    cap.set(cv2.CAP_PROP_FPS, 30)
 
     try:
         while True:
@@ -653,176 +794,12 @@ def generate_frames(mode="yolov8_eye"):
             if not ret:
                 break
 
-            # Anti-Spoofing Eye Blink Detection
-            if is_eye_mode and dlib_predictor_instance is not None:
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                faces = dlib_detector(gray)
-                for face in faces:
-                    landmarks = dlib_predictor_instance(gray, face)
-                    left_eye = [(landmarks.part(i).x, landmarks.part(i).y) for i in range(36, 42)]
-                    right_eye = [(landmarks.part(i).x, landmarks.part(i).y) for i in range(42, 48)]
-
-                    left_ear = calculate_ear(left_eye)
-                    right_ear = calculate_ear(right_eye)
-                    ear = (left_ear + right_ear) / 2.0
-
-                    if ear < EAR_THRESHOLD:
-                        blink_counter += 1
-                    else:
-                        if EAR_CONSECUTIVE_MIN <= blink_counter <= EAR_CONSECUTIVE_MAX and eye_was_open:
-                            current_time = datetime.now()
-                            if (current_time - last_blink_time).total_seconds() > BLINK_TIMEOUT:
-                                blink_detected = True
-                                last_blink_time = current_time
-                        blink_counter = 0
-                        eye_was_open = True
-
-                    for (x, y) in left_eye + right_eye:
-                        cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
-
-            # Hand gesture detection
-            hand_detected = False
-            if is_hand_mode and hands is not None:
-                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                hand_results = hands.process(rgb_frame)
-                if hand_results.multi_hand_landmarks:
-                    for hand_landmarks in hand_results.multi_hand_landmarks:
-                        mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-                        hand_detected = True
-
-            # YOLO object/face detection
-            boxes = []
-            confidences = []
-            class_ids = []
-
-            if selected_model is not None:
-                results = selected_model(frame, verbose=False)
-                for result in results:
-                    for box in result.boxes:
-                        x1, y1, x2, y2 = map(int, box.xyxy[0])
-                        confidence = float(box.conf[0])
-                        class_id = int(box.cls[0])
-
-                        if confidence > 0.45 and class_id == 0:
-                            boxes.append([x1, y1, x2 - x1, y2 - y1])
-                            confidences.append(confidence)
-                            class_ids.append(class_id)
-
-            # Robust Fallback: If close-up face has no YOLO body detection, use frontal face detector
-            if len(boxes) == 0 and dlib_detector is not None:
-                gray_f = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                d_faces = dlib_detector(gray_f, 0)
-                for df in d_faces:
-                    fx1, fy1, fx2, fy2 = df.left(), df.top(), df.right(), df.bottom()
-                    boxes.append([fx1, fy1, fx2 - fx1, fy2 - fy1])
-                    confidences.append(0.95)
-                    class_ids.append(0)
-
-            indices = cv2.dnn.NMSBoxes(boxes, confidences, score_threshold=0.3, nms_threshold=0.3)
-
-            for i in indices:
-                box = boxes[i]
-                x1, y1, w, h = box
-                x2 = x1 + w
-                y2 = y1 + h
-
-                x1, y1 = max(0, x1), max(0, y1)
-                x2, y2 = min(frame.shape[1], x2), min(frame.shape[0], y2)
-
-                face_roi = frame[y1:y2, x1:x2]
-                if face_roi.size == 0 or face_roi.shape[0] < 20 or face_roi.shape[1] < 20:
-                    continue
-
-                rgb_face_roi = cv2.cvtColor(face_roi, cv2.COLOR_BGR2RGB)
-                face_encodings = face_recognition.face_encodings(rgb_face_roi)
-                if not face_encodings:
-                    continue
-
-                face_names = []
-                face_ids = []
-                face_classes = []
-                for face_encoding in face_encodings:
-                    if face_encodings_tree is not None:
-                        dist_val, ind = face_encodings_tree.query([face_encoding], k=1)
-                        best_match_index = ind[0][0]
-                        if dist_val[0][0] < 0.65:
-                            name = known_face_names[best_match_index]
-                            uid = known_face_ids[best_match_index]
-                            cname = known_face_classes[best_match_index] if best_match_index < len(known_face_classes) else 'N/A'
-                        else:
-                            name = "Unknown"
-                            uid = "Unknown"
-                            cname = "Unknown"
-                    else:
-                        name = "Unknown"
-                        uid = "Unknown"
-                        cname = "Unknown"
-
-                    face_names.append(name)
-                    face_ids.append(uid)
-                    face_classes.append(cname)
-
-                # Liveness evaluation
-                is_liveness_verified = False
-                if is_eye_mode:
-                    is_liveness_verified = blink_detected
-                elif is_hand_mode:
-                    is_liveness_verified = hand_detected
-                else:
-                    is_liveness_verified = True
-
-                # Anti-Spoofing & Duplicate Lockout
-                if face_names and is_liveness_verified:
-                    student_name = face_names[0]
-                    student_id = face_ids[0]
-                    student_class = face_classes[0] if face_classes[0] != 'Unknown' else session.get('active_class', 'N/A')
-                    label = f"{student_name} ({student_id})"
-
-                    if student_name != "Unknown" and student_id not in recorded_ids and student_name not in recorded_names:
-                        timestamp_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        attendance_data.append({
-                            'Name': student_name,
-                            'ID': student_id,
-                            'Class': student_class,
-                            'Time': timestamp_now,
-                            'Verification_Mode': mode_label
-                        })
-                        recorded_names.add(student_name)
-                        recorded_ids.add(student_id)
-                        if is_eye_mode:
-                            blink_detected = False
-                else:
-                    label = face_names[0] if face_names else "Unknown"
-
-                is_known = (face_names and face_names[0] != "Unknown")
-                is_already_marked = (face_ids and face_ids[0] in recorded_ids)
-
-                if is_already_marked:
-                    color = (255, 191, 0)
-                    label += " [PRESENT]"
-                elif is_known and is_liveness_verified:
-                    color = (0, 255, 0)
-                    label += " [LIVENESS VERIFIED]"
-                elif is_known and not is_liveness_verified:
-                    color = (0, 165, 255)
-                    label += " [BLINK / GESTURE REQUIRED]"
-                else:
-                    color = (0, 0, 255)
-
-                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-                cv2.putText(frame, label, (x1, max(15, y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 2)
-
-            # Mode banner overlay on video
-            cv2.putText(frame, f"Engine: {mode_label}", (20, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
-
-            ret, buffer = cv2.imencode('.jpg', frame)
-            frame_bytes = buffer.tobytes()
+            processed = process_single_frame(frame, mode)
+            ret, buffer = cv2.imencode('.jpg', processed)
             yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                   b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
     finally:
         cap.release()
-        if hands is not None:
-            hands.close()
 
 @app.route('/video_feed')
 def video_feed():
@@ -830,6 +807,37 @@ def video_feed():
         return redirect(url_for('login'))
     mode = request.args.get('mode') or session.get('detection_mode', active_detection_mode)
     return Response(generate_frames(mode), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/process_frame', methods=['POST'])
+def process_frame():
+    if 'username' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    payload = request.get_json(silent=True) or {}
+    b64_data = payload.get('image', '')
+    mode = payload.get('mode') or session.get('detection_mode', active_detection_mode)
+
+    if not b64_data or 'base64,' not in b64_data:
+        return jsonify({'error': 'Invalid image data'}), 400
+
+    try:
+        img_bytes = base64.b64decode(b64_data.split('base64,')[1])
+        nparr = np.frombuffer(img_bytes, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if frame is None:
+            return jsonify({'error': 'Could not decode image'}), 400
+
+        processed = process_single_frame(frame, mode)
+        ret, buffer = cv2.imencode('.jpg', processed, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        out_b64 = 'data:image/jpeg;base64,' + base64.b64encode(buffer).decode('utf-8')
+
+        return jsonify({
+            'success': True,
+            'image': out_b64,
+            'attendance_data': attendance_data,
+            'count': len(attendance_data)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # ==============================================================================
 # Save & View Attendance Records with Cross-Instructor Substitute Discovery
