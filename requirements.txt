@@ -1,12 +1,10 @@
 Flask
-gunicorn
-opencv-python-headless
+opencv-python
 ultralytics
 dlib
 face-recognition
-face-recognition-models
 numpy
 scikit-learn
 scipy
-mediapipe>=0.10.14,<1.0.0
+mediapipe
 setuptools<80

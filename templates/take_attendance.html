@@ -374,26 +374,14 @@
         <div class="row g-4">
             <!-- Video Streaming Column -->
             <div class="col-lg-8">
-                <div class="video-container position-relative" style="min-height: 460px; background: #0b1120; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-                    <div class="live-badge" style="position: absolute; top: 15px; left: 15px; z-index: 20;">
+                <div class="video-container">
+                    <div class="live-badge">
                         <div class="pulsing-dot"></div> LIVE
                     </div>
-                    <div class="engine-badge-live" style="position: absolute; top: 15px; right: 15px; z-index: 20;">
+                    <div class="engine-badge-live">
                         <i class="fas fa-microchip me-1"></i> {{ mode_name }}
                     </div>
-                    
-                    <!-- 1. Server-Side Direct OpenCV Video Feed (Local Mac) -->
-                    <img id="serverVideoFeed" src="{{ url_for('video_feed', mode=detection_mode) }}" class="video-feed w-100 h-100" style="object-fit: cover;" alt="Camera Feed" onerror="startBrowserWebcam()">
-
-                    <!-- 2. Client-Side Browser Webcam Feed (Render Cloud) -->
-                    <video id="clientVideo" autoplay playsinline muted class="d-none w-100 h-100" style="object-fit: cover; transform: scaleX(-1);"></video>
-                    <canvas id="overlayCanvas" class="position-absolute top-0 start-0 w-100 h-100" style="pointer-events: none; z-index: 10;"></canvas>
-                    <canvas id="captureCanvas" class="d-none"></canvas>
-
-                    <!-- Cloud Stream Overlay Badge -->
-                    <div id="cloudBadge" class="position-absolute bottom-0 start-0 m-3 px-3 py-1 bg-dark bg-opacity-75 text-info rounded-pill small fw-bold d-none" style="z-index: 20;">
-                        <i class="fas fa-cloud me-1"></i> Cloud AI Stream Active
-                    </div>
+                    <img src="{{ url_for('video_feed', mode=detection_mode) }}" class="video-feed" alt="Camera Feed">
                 </div>
 
                 <div class="d-flex gap-3 mt-3">
@@ -452,9 +440,6 @@
     </script>
     {% if class_name %}
     <script>
-        let isBrowserWebcamActive = false;
-        let isProcessingFrame = false;
-
         function renderAttendance(data) {
             const listElem = document.getElementById('attendance-list');
             const countElem = document.getElementById('record-count');
@@ -482,106 +467,6 @@
                 .then(data => renderAttendance(data))
                 .catch(err => console.error("Error fetching live attendance:", err));
         }
-
-        function drawBoundingBoxes(boxes) {
-            const overlay = document.getElementById('overlayCanvas');
-            const capture = document.getElementById('captureCanvas');
-            if (!overlay || !capture || !overlay.width) return;
-
-            const ctx = overlay.getContext('2d');
-            ctx.clearRect(0, 0, overlay.width, overlay.height);
-
-            const scaleX = overlay.width / capture.width;
-            const scaleY = overlay.height / capture.height;
-
-            boxes.forEach(b => {
-                // Since video is mirrored for user convenience, mirror X for box
-                const origX = b.x * scaleX;
-                const origY = b.y * scaleY;
-                const boxW = b.w * scaleX;
-                const boxH = b.h * scaleY;
-                const drawX = overlay.width - origX - boxW;
-
-                ctx.strokeStyle = b.color || '#00ff00';
-                ctx.lineWidth = 3;
-                ctx.strokeRect(drawX, origY, boxW, boxH);
-
-                ctx.fillStyle = b.color || '#00ff00';
-                ctx.font = 'bold 16px Inter, sans-serif';
-                ctx.fillText(b.label || '', drawX, Math.max(22, origY - 8));
-            });
-        }
-
-        function startBrowserWebcam() {
-            if (isBrowserWebcamActive) return;
-            isBrowserWebcamActive = true;
-            console.log("🌐 Server camera stream unavailable. Starting browser webcam stream...");
-
-            const serverImg = document.getElementById('serverVideoFeed');
-            const clientVideo = document.getElementById('clientVideo');
-            const overlayCanvas = document.getElementById('overlayCanvas');
-            const captureCanvas = document.getElementById('captureCanvas');
-            const cloudBadge = document.getElementById('cloudBadge');
-
-            if (serverImg) serverImg.classList.add('d-none');
-
-            navigator.mediaDevices.getUserMedia({
-                video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
-                audio: false
-            })
-            .then(stream => {
-                clientVideo.srcObject = stream;
-                clientVideo.classList.remove('d-none');
-                if (cloudBadge) cloudBadge.classList.remove('d-none');
-
-                clientVideo.onloadedmetadata = () => {
-                    clientVideo.play();
-                    overlayCanvas.width = clientVideo.videoWidth || 1280;
-                    overlayCanvas.height = clientVideo.videoHeight || 720;
-                    captureCanvas.width = 640;
-                    captureCanvas.height = 360;
-
-                    // Send frames every 250ms
-                    setInterval(() => {
-                        if (isProcessingFrame || !clientVideo.videoWidth) return;
-                        isProcessingFrame = true;
-
-                        const ctx = captureCanvas.getContext('2d');
-                        ctx.drawImage(clientVideo, 0, 0, captureCanvas.width, captureCanvas.height);
-                        const dataUrl = captureCanvas.toDataURL('image/jpeg', 0.6);
-
-                        fetch('/process_frame', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ image: dataUrl, mode: "{{ detection_mode }}" })
-                        })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data && data.boxes) {
-                                drawBoundingBoxes(data.boxes);
-                            }
-                            if (data && data.attendance_data) {
-                                renderAttendance(data.attendance_data);
-                            }
-                        })
-                        .catch(e => console.error("Cloud frame error:", e))
-                        .finally(() => { isProcessingFrame = false; });
-                    }, 250);
-                };
-            })
-            .catch(err => {
-                console.error("Camera access error:", err);
-                alert("Please click 'Allow' when your browser asks for camera permissions to stream to Render!");
-            });
-        }
-
-        // Check if server stream fails after 1 second and activate client webcam
-        setTimeout(() => {
-            const serverImg = document.getElementById('serverVideoFeed');
-            if (serverImg && (!serverImg.complete || serverImg.naturalWidth === 0)) {
-                startBrowserWebcam();
-            }
-        }, 1200);
 
         // Poll attendance records every 1 second
         setInterval(updateAttendanceFeed, 1000);
