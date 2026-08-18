@@ -154,23 +154,37 @@ def get_teacher_assigned_classes(username):
     return all_classes_list
 
 # ==============================================================================
-# Model & Landmark Initializations
 # ==============================================================================
-print("⏳ Initializing models and predictors...")
+# Model & Landmark Initializations (Memory-Optimized Lazy Loading)
+# ==============================================================================
+import torch
+torch.set_num_threads(1)  # Reduce PyTorch memory footprint for cloud containers
 
-# Load YOLOv8 & YOLOv5 Models
-yolov8_model_path = os.path.join(BASE_DIR, 'yolov8/yolov8n.pt')
-yolov5_model_path = os.path.join(BASE_DIR, 'yolov5/yolov5su.pt')
-if not os.path.exists(yolov5_model_path):
-    yolov5_model_path = os.path.join(BASE_DIR, 'yolov5/yolov5s.pt')
+_model_cache = {}
 
-model_v8 = YOLO(yolov8_model_path) if os.path.exists(yolov8_model_path) else None
-model_v5 = YOLO(yolov5_model_path) if os.path.exists(yolov5_model_path) else None
+def get_yolo_model(mode="yolov8_eye"):
+    """Lazily loads only the requested model on-demand to stay within 512MB RAM."""
+    is_v5 = mode.startswith("yolov5")
+    key = "yolov5" if is_v5 else "yolov8"
+    if key not in _model_cache:
+        if is_v5:
+            p = os.path.join(BASE_DIR, 'yolov5/yolov5su.pt')
+            if not os.path.exists(p):
+                p = os.path.join(BASE_DIR, 'yolov5/yolov5s.pt')
+        else:
+            p = os.path.join(BASE_DIR, 'yolov8/yolov8n.pt')
+        _model_cache[key] = YOLO(p) if os.path.exists(p) else None
+    return _model_cache.get(key)
 
-# Initialize dlib's face detector and facial landmark predictor
-landmark_path = os.path.join(BASE_DIR, "shape_predictor_68_face_landmarks.dat")
+# Dlib detector (lightweight)
 dlib_detector = dlib.get_frontal_face_detector()
-dlib_predictor = dlib.shape_predictor(landmark_path) if os.path.exists(landmark_path) else None
+
+def get_dlib_predictor():
+    """Lazily loads the 100MB dlib landmark file only when eye blink mode is active."""
+    if "dlib_predictor" not in _model_cache:
+        landmark_path = os.path.join(BASE_DIR, "shape_predictor_68_face_landmarks.dat")
+        _model_cache["dlib_predictor"] = dlib.shape_predictor(landmark_path) if os.path.exists(landmark_path) else None
+    return _model_cache.get("dlib_predictor")
 
 # Thresholds for Anti-Spoofing Blink Detection
 EAR_THRESHOLD = 0.28
@@ -607,8 +621,8 @@ def get_attendance():
 def generate_frames(mode="yolov8_eye"):
     global attendance_data, recorded_names, recorded_ids, attendance_filename, last_blink_time
 
-    use_v5 = mode.startswith("yolov5")
-    selected_model = model_v5 if use_v5 and model_v5 is not None else model_v8
+    selected_model = get_yolo_model(mode)
+    dlib_predictor_instance = get_dlib_predictor() if is_eye_mode else None
     is_eye_mode = "eye" in mode
     is_hand_mode = "hand" in mode
 
@@ -628,7 +642,7 @@ def generate_frames(mode="yolov8_eye"):
     eye_was_open = False
 
     hands = None
-    if is_hand_mode:
+    if is_hand_mode and mp_hands is not None:
         hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.7)
 
     mode_label = MODE_DISPLAY_NAMES.get(mode, "Detection Active")
@@ -640,11 +654,11 @@ def generate_frames(mode="yolov8_eye"):
                 break
 
             # Anti-Spoofing Eye Blink Detection
-            if is_eye_mode and dlib_predictor is not None:
+            if is_eye_mode and dlib_predictor_instance is not None:
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 faces = dlib_detector(gray)
                 for face in faces:
-                    landmarks = dlib_predictor(gray, face)
+                    landmarks = dlib_predictor_instance(gray, face)
                     left_eye = [(landmarks.part(i).x, landmarks.part(i).y) for i in range(36, 42)]
                     right_eye = [(landmarks.part(i).x, landmarks.part(i).y) for i in range(42, 48)]
 
