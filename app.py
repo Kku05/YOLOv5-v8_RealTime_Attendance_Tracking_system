@@ -970,5 +970,6 @@ def view_attendance():
 # ==============================================================================
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5001))
-    print(f"🚀 Starting Unified Attendance System on http://127.0.0.1:{port}")
-    app.run(debug=True, port=port)
+    host = os.environ.get("HOST", "0.0.0.0")
+    print(f"🚀 Starting Unified Attendance System on http://{host}:{port}")
+    app.run(host=host, port=port, debug=False)

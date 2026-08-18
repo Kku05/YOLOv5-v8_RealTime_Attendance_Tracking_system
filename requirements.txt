@@ -1,8 +1,10 @@
 Flask
+gunicorn
 opencv-python
 ultralytics
 dlib
 face-recognition
+face_recognition_models
 numpy
 scikit-learn
 scipy

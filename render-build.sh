@@ -11,7 +11,10 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu -
 echo "🛠️ 3. Setting single-threaded compile limit to prevent OOM..."
 export CMAKE_BUILD_PARALLEL_LEVEL=1
 
-echo "📦 4. Installing remaining project requirements..."
+echo "📦 4. Installing face recognition models..."
+pip install face_recognition_models --retries 10 --timeout 120
+
+echo "📦 5. Installing remaining project requirements..."
 pip install -r requirements.txt --retries 10 --timeout 120
 
 echo "✅ Build completed successfully!"
