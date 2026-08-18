@@ -8,5 +8,5 @@ face-recognition-models
 numpy
 scikit-learn
 scipy
-mediapipe>=0.10.14
+mediapipe>=0.10.14,<1.0.0
 setuptools<80

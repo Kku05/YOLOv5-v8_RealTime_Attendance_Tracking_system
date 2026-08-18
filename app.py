@@ -179,8 +179,12 @@ EAR_CONSECUTIVE_MAX = 5
 BLINK_TIMEOUT = 1.0  # seconds between blinks
 
 # Mediapipe Hands
-mp_hands = mp.solutions.hands
-mp_draw = mp.solutions.drawing_utils
+try:
+    mp_hands = mp.solutions.hands if hasattr(mp, 'solutions') and hasattr(mp.solutions, 'hands') else None
+    mp_draw = mp.solutions.drawing_utils if hasattr(mp, 'solutions') and hasattr(mp.solutions, 'drawing_utils') else None
+except Exception:
+    mp_hands = None
+    mp_draw = None
 
 # Mode Display Names Mapping
 MODE_DISPLAY_NAMES = {
