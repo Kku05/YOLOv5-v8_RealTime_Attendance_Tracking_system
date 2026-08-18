@@ -634,6 +634,7 @@ def process_single_frame(frame, mode="yolov8_eye"):
     is_hand_mode = "hand" in mode
     dlib_predictor_instance = get_dlib_predictor() if is_eye_mode else None
     mode_label = MODE_DISPLAY_NAMES.get(mode, "Detection Active")
+    boxes_meta = []
 
     # Anti-Spoofing Eye Blink Detection
     if is_eye_mode and dlib_predictor_instance is not None:
@@ -762,22 +763,35 @@ def process_single_frame(frame, mode="yolov8_eye"):
 
         if is_already_marked:
             color = (255, 191, 0)
+            color_hex = "#00bfff"
             label += " [PRESENT]"
         elif is_known and is_liveness_verified:
             color = (0, 255, 0)
+            color_hex = "#00ff00"
             label += " [LIVENESS VERIFIED]"
         elif is_known and not is_liveness_verified:
             color = (0, 165, 255)
+            color_hex = "#ffa500"
             label += " [BLINK / GESTURE REQUIRED]"
         else:
             color = (0, 0, 255)
+            color_hex = "#ff3b30"
 
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
         cv2.putText(frame, label, (x1, max(15, y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 2)
 
+        boxes_meta.append({
+            'x': int(x1),
+            'y': int(y1),
+            'w': int(x2 - x1),
+            'h': int(y2 - y1),
+            'label': label,
+            'color': color_hex
+        })
+
     # Mode banner overlay on video
     cv2.putText(frame, f"Engine: {mode_label}", (20, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
-    return frame
+    return frame, boxes_meta
 
 def generate_frames(mode="yolov8_eye"):
     cap = cv2.VideoCapture(0)
@@ -794,7 +808,7 @@ def generate_frames(mode="yolov8_eye"):
             if not ret:
                 break
 
-            processed = process_single_frame(frame, mode)
+            processed, _ = process_single_frame(frame, mode)
             ret, buffer = cv2.imencode('.jpg', processed)
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
@@ -826,13 +840,11 @@ def process_frame():
         if frame is None:
             return jsonify({'error': 'Could not decode image'}), 400
 
-        processed = process_single_frame(frame, mode)
-        ret, buffer = cv2.imencode('.jpg', processed, [cv2.IMWRITE_JPEG_QUALITY, 80])
-        out_b64 = 'data:image/jpeg;base64,' + base64.b64encode(buffer).decode('utf-8')
+        _, boxes_meta = process_single_frame(frame, mode)
 
         return jsonify({
             'success': True,
-            'image': out_b64,
+            'boxes': boxes_meta,
             'attendance_data': attendance_data,
             'count': len(attendance_data)
         })
