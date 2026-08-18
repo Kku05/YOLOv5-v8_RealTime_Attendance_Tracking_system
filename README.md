@@ -55,14 +55,13 @@ Open **[http://127.0.0.1:5001](http://127.0.0.1:5001)** in your browser.
 
 ## 📚 Documentation
 
-- 📖 **[Project Architecture & Workflow Specification](PROJECT_OVERVIEW.md)**: Full pipeline diagrams, AI engines, database schema, and performance benchmarks.
-- 📋 **[System & Technical Requirements](REQUIREMENTS.md)**: Hardware, camera, RAM, and Python dependency specifications.
-- ⚙️ **[Installation & Setup Guide](SETUP.md)**: Step-by-step installation, student enrollment guide, and troubleshooting.
-- 📜 **[Third-Party License Audit](THIRD_PARTY_LICENSES.md)**: Open-source legal compliance audit.
+- 📖 **[Project Architecture & Specification](PROJECT_OVERVIEW.md)**: Full pipeline diagrams, 6 AI engines, database schema, and performance benchmarks.
+- ⚙️ **[Installation & Setup Guide](SETUP.md)**: Step-by-step installation, student enrollment guide, requirements, and credentials.
+- 📜 **[MIT License](LICENSE)**: Open source licensing terms.
 
 ---
 
-## 📁 Repository Structure
+## 📁 Clean Repository Structure
 
 ```
 YOLOv5-v8_RealTime_Attendance_Tracking_system/
@@ -82,12 +81,10 @@ YOLOv5-v8_RealTime_Attendance_Tracking_system/
 │   └── see_attendance.html
 ├── static/css/                             # Premium dark/glassmorphic styling
 ├── requirements.txt                        # Python dependencies
-├── REQUIREMENTS.md                         # Technical specifications
-├── SETUP.md                                # Setup & configuration guide
+├── SETUP.md                                # Setup, installation, & requirements guide
 ├── PROJECT_OVERVIEW.md                     # Architecture specification
-├── THIRD_PARTY_LICENSES.md                 # Open-source license audit
 ├── LICENSE                                 # MIT License
-└── README.md                               # Project documentation
+└── README.md                               # Project quick-start documentation
 ```
 
 ---

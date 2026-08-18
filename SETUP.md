@@ -4,7 +4,19 @@ A complete installation, hardware configuration, and startup guide for the **YOL
 
 ---
 
-## 1. Quick Start (macOS & Linux)
+## 1. System Requirements & Prerequisites
+
+| Requirement | Minimum | Recommended | Notes |
+| :--- | :--- | :--- | :--- |
+| **Python** | `3.9.x` | `3.10.x` / `3.11.x` | Required runtime |
+| **RAM** | 4 GB | 8 GB+ | Application uses ~200–350 MB RAM |
+| **Storage** | 1.5 GB | 2 GB | Includes YOLO weights & dlib 68-landmarks model |
+| **Camera** | 720p HD | 1080p Full HD (30 FPS) | MacBook FaceTime HD Camera or external USB camera |
+| **CMake** | `3.18+` | Latest | Required to compile `dlib` |
+
+---
+
+## 2. Quick Start (macOS & Linux)
 
 ### Step 1: Open Terminal & Navigate to Project
 ```bash
@@ -15,7 +27,6 @@ cd "/Users/tirth/Downloads/my project/YOLOv5-v8_RealTime_Attendance_Tracking_sys
 ```bash
 source venv/bin/activate
 ```
-*(If you need to recreate the environment: `python3.11 -m venv venv && source venv/bin/activate`)*
 
 ### Step 3: Install Required Dependencies
 ```bash
@@ -31,9 +42,11 @@ python app.py
 Open your browser at:
 👉 **[http://127.0.0.1:5001](http://127.0.0.1:5001)**
 
+*(Or simply run `./run_mac.sh` for one-click startup)*
+
 ---
 
-## 2. Pre-Configured Login Credentials
+## 3. Pre-Configured Login Credentials
 
 | Username | Password | Role | Assigned Classes |
 | :--- | :--- | :--- | :--- |
@@ -43,7 +56,7 @@ Open your browser at:
 
 ---
 
-## 3. How to Use the System
+## 4. How to Use the System
 
 ### 📸 1. Registering a Student
 1. Log in to the dashboard.
@@ -69,11 +82,3 @@ Open your browser at:
 1. Click **"Attendance Records"**.
 2. Filter by **Class** and **Date**.
 3. View summary stats (Present, Absent, Attendance Rate %) and download CSV reports.
-
----
-
-## 4. One-Click Startup Script (`run_mac.sh`)
-You can also launch the app with a single command:
-```bash
-./run_mac.sh
-```
