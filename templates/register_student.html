@@ -88,7 +88,6 @@
             color: #fff;
         }
 
-        /* Background Animation */
         .background-animation {
             position: fixed;
             top: 0;
@@ -97,6 +96,7 @@
             height: 100%;
             z-index: -1;
             overflow: hidden;
+            pointer-events: none;
         }
 
         .shape {
@@ -165,6 +165,18 @@
     </nav>
 
     <div class="container">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show shadow-sm" role="alert">
+                    <i class="fas fa-info-circle me-2"></i> {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
         <!-- Alerts -->
         {% if success_msg %}
         <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
@@ -320,14 +332,20 @@
                                     <td><span class="badge bg-info text-dark">{{ student.class_name }}</span></td>
                                     <td><small class="text-muted">{{ student.email }}</small></td>
                                     <td>
+                                        {% if is_admin %}
                                         <form method="POST"
                                             action="{{ url_for('delete_student', student_id=student.id) }}"
                                             onsubmit="return confirm('Remove student {{ student.name }} ({{ student.id }})?');">
                                             <button type="submit" class="btn btn-outline-danger btn-sm"
-                                                title="Remove Profile">
+                                                title="Remove Profile (Admin Only)">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </form>
+                                        {% else %}
+                                        <span class="badge bg-light text-muted border" title="Only Administrators can delete student profiles">
+                                            <i class="fas fa-lock me-1"></i>Protected
+                                        </span>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% else %}

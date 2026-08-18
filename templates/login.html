@@ -3,271 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Attendance System</title>
+    <title>Login - Real-Time Attendance System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* Body Styling */
         body {
             margin: 0;
-            padding: 0;
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-family: 'Arial', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #0d1b2a, #1b263b, #415a77);
             color: #fff;
-            overflow: hidden;
-            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
-            background-size: 300% 300%;
-            animation: gradientAnimation 8s ease infinite;
         }
 
-        @keyframes gradientAnimation {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        /* Background Animation */
-        .background-animation {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            z-index: -1;
-        }
-
-        .shape {
-            position: absolute;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            animation: floatShapes 15s infinite ease-in-out;
-        }
-
-        .shape.circle {
-            width: 120px;
-            height: 120px;
-        }
-
-        .shape.square {
-            width: 100px;
-            height: 100px;
-            border-radius: 0;
-        }
-
-        .shape.line {
-            width: 3px;
-            height: 200px;
-            background: rgba(255, 255, 255, 0.5);
-        }
-
-        .shape:nth-child(1) {
-            top: 10%;
-            left: 20%;
-            animation-duration: 12s;
-        }
-
-        .shape:nth-child(2) {
-            top: 30%;
-            left: 50%;
-            animation-duration: 14s;
-        }
-
-        .shape:nth-child(3) {
-            top: 70%;
-            left: 80%;
-            animation-duration: 16s;
-        }
-
-        .shape:nth-child(4) {
-            top: 50%;
-            left: 10%;
-            animation-duration: 18s;
-        }
-
-        .shape:nth-child(5) {
-            top: 80%;
-            left: 40%;
-            animation-duration: 20s;
-        }
-
-        @keyframes floatShapes {
-            0% {
-                transform: translate(0, 0) scale(1);
-                opacity: 1;
-            }
-            50% {
-                transform: translate(50px, -50px) scale(1.2);
-                opacity: 0.5;
-            }
-            100% {
-                transform: translate(0, 0) scale(1);
-                opacity: 1;
-            }
-        }
-
-        /* Card Styling */
-        .card {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(240, 240, 240, 0.9));
-            color: #000;
+        .login-card {
+            background: rgba(255, 255, 255, 0.96);
+            color: #212529;
             border-radius: 20px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-            padding: 30px;
-            width: 400px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            position: relative;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            max-width: 820px;
+            width: 92%;
             overflow: hidden;
         }
 
-        .card::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.2), transparent);
-            z-index: 0;
-            animation: rotateBackground 10s linear infinite;
-        }
-
-        @keyframes rotateBackground {
-            0% {
-                transform: rotate(0deg);
-            }
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4);
-        }
-
-        .card-content {
-            position: relative;
-            z-index: 1;
-        }
-
-        /* Button Styling */
         .btn-primary {
-            background-color: #1a2a6c;
+            background-color: #1b263b;
             border: none;
-            font-size: 1rem;
             font-weight: 600;
             padding: 10px 20px;
-            transition: background-color 0.3s ease, transform 0.2s ease;
+            transition: all 0.2s ease;
         }
 
         .btn-primary:hover {
-            background-color: #b21f1f;
-            transform: scale(1.05);
+            background-color: #0d1b2a;
+            transform: translateY(-1px);
         }
 
-        /* Input Field Styling */
         .form-control {
-            border: 2px solid #1a2a6c;
-            border-radius: 10px;
-            padding: 10px;
-            font-size: 1rem;
+            border: 1.5px solid #ced4da;
+            border-radius: 8px;
+            padding: 10px 14px;
         }
 
         .form-control:focus {
-            border-color: #b21f1f;
-            box-shadow: 0 0 5px rgba(178, 31, 31, 0.5);
-        }
-
-        /* Headings and Text */
-        h1, h2 {
-            font-weight: 800;
-            color: #1a2a6c;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-        }
-
-        h2 {
-            font-size: 2rem;
-            color: #b21f1f;
-        }
-
-        p {
-            font-size: 1.2rem;
-            color: #555;
-            font-weight: 500;
-        }
-
-        /* Dark Mode Toggle */
-        .dark-mode-toggle {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            cursor: pointer;
+            border-color: #415a77;
+            box-shadow: 0 0 0 0.2rem rgba(65, 90, 119, 0.2);
         }
     </style>
 </head>
 <body>
-    <!-- Background Animation -->
-    <div class="background-animation">
-        <div class="shape circle"></div>
-        <div class="shape square"></div>
-        <div class="shape line"></div>
-        <div class="shape circle"></div>
-        <div class="shape square"></div>
-    </div>
-
-    <!-- Dark Mode Toggle -->
-    <div class="dark-mode-toggle">
-        <button id="darkModeToggle" class="btn btn-sm btn-light">Toggle Dark Mode</button>
-    </div>
-
-    <div class="container d-flex justify-content-center align-items-center vh-100">
-        <div class="card shadow-lg" style="width: 800px; padding: 30px;">
-            <!-- New Div for the Heading -->
-            <div class="w-100 text-center mb-4">
-                <h1>Welcome to the Future of Attendance</h1>
+    <div class="login-card p-4 p-md-5">
+        <div class="row align-items-center g-4">
+            <div class="col-md-5 text-center d-none d-md-block">
+                <img src="/static/login.png" alt="Login Graphic" class="img-fluid rounded-3 mb-2" onerror="this.src='/static/home.png'">
+                <h5 class="fw-bold text-dark mt-2 mb-1">Face Recognition AI</h5>
+                <p class="text-muted small mb-0">Automated Attendance & Liveness Tracking</p>
             </div>
-            <!-- Content Section -->
-            <div class="d-flex flex-row align-items-center">
-                <!-- Image Section -->
-                <div class="me-4">
-                    <img src="/static/login.png" alt="Login Image" style="width: 300px; height: auto; border-radius: 10px;">
+            
+            <div class="col-md-7">
+                <div class="text-center text-md-start mb-4">
+                    <h2 class="fw-bold text-dark mb-1"><i class="fas fa-shield-alt text-primary me-2"></i>Instructor Login</h2>
+                    <p class="text-muted small">Sign in to manage classes and start attendance sessions.</p>
                 </div>
-                <!-- Form Section -->
-                <div class="card-content">
-                    <p class="text-center text-muted">Experience seamless, secure, and intelligent attendance management like never before.</p>
-                    <h2 class="text-center mb-4">Access Your Account</h2>
-                    <form method="POST" action="/login">
-                        <div class="mb-3">
-                            <label for="username" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="username" name="username" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="user_id" class="form-label">User ID</label>
-                            <input type="text" class="form-control" id="user_id" name="user_id" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">Login</button>
-                    </form>
+
+                {% if error %}
+                <div class="alert alert-danger py-2 small d-flex align-items-center" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <div>{{ error }}</div>
                 </div>
+                {% endif %}
+
+                <form method="POST" action="{{ url_for('login_user') }}">
+                    <div class="mb-3">
+                        <label for="username" class="form-label fw-semibold small text-secondary">Username</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-user text-muted"></i></span>
+                            <input type="text" class="form-control" id="username" name="username" placeholder="e.g. tirth or admin" required autofocus>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="user_id" class="form-label fw-semibold small text-secondary">Password / Security ID</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-lock text-muted"></i></span>
+                            <input type="password" class="form-control" id="user_id" name="user_id" placeholder="Enter your password" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-2 fs-6 shadow-sm">
+                        <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                    </button>
+                </form>
             </div>
         </div>
     </div>
 
-    <script>
-        // Dark Mode Toggle
-        const darkModeToggle = document.getElementById('darkModeToggle');
-        darkModeToggle.addEventListener('click', () => {
-            document.body.classList.toggle('dark-mode');
-            const isDarkMode = document.body.classList.contains('dark-mode');
-            darkModeToggle.textContent = isDarkMode ? 'Light Mode' : 'Dark Mode';
-            document.body.style.background = isDarkMode
-                ? 'linear-gradient(135deg, #000000, #434343)'
-                : 'linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d)';
-        });
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

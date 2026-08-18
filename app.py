@@ -12,17 +12,80 @@ from scipy.spatial import distance as dist
 import mediapipe as mp
 import base64
 import re
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = 'rats_super_secret_session_key_2026'
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PHOTOS_DIR = os.path.join(BASE_DIR, 'photos')
 CLASSES_CSV = os.path.join(BASE_DIR, 'classes.csv')
 USERS_CSV = os.path.join(BASE_DIR, 'users.csv')
 KNOWN_FACES_CSV = os.path.join(BASE_DIR, 'known_faces.csv')
+SECRET_KEY_FILE = os.path.join(BASE_DIR, '.secret_key')
 
 os.makedirs(PHOTOS_DIR, exist_ok=True)
+
+# ==============================================================================
+# Security: Cryptographic Secret Key Management
+# ==============================================================================
+def get_or_create_secret_key():
+    if os.environ.get('SECRET_KEY'):
+        return os.environ.get('SECRET_KEY')
+    if os.path.exists(SECRET_KEY_FILE):
+        try:
+            with open(SECRET_KEY_FILE, 'r', encoding='utf-8') as f:
+                key = f.read().strip()
+                if key:
+                    return key
+        except Exception:
+            pass
+    # Generate 32-byte secure random token
+    new_key = os.urandom(32).hex()
+    try:
+        with open(SECRET_KEY_FILE, 'w', encoding='utf-8') as f:
+            f.write(new_key)
+    except Exception:
+        pass
+    return new_key
+
+app.secret_key = get_or_create_secret_key()
+
+# ==============================================================================
+# Security: Salted Password Hashing & Credential Upgrade
+# ==============================================================================
+def ensure_secure_user_credentials():
+    """Automatically upgrades any plain text passwords in users.csv to secure salted hashes."""
+    if not os.path.exists(USERS_CSV):
+        return
+
+    updated_rows = []
+    needs_rewrite = False
+
+    with open(USERS_CSV, 'r', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        header = next(reader, None)
+        for row in reader:
+            if not row or len(row) < 2:
+                continue
+            u = row[0].strip()
+            pwd = row[1].strip()
+            assigned = row[2].strip() if len(row) > 2 else 'ALL'
+            role = row[3].strip() if len(row) > 3 else 'Faculty'
+
+            if not (pwd.startswith('scrypt:') or pwd.startswith('pbkdf2:')):
+                pwd = generate_password_hash(pwd)
+                needs_rewrite = True
+
+            updated_rows.append([u, pwd, assigned, role])
+
+    if needs_rewrite:
+        with open(USERS_CSV, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(['username', 'password_hash', 'assigned_classes', 'role'])
+            writer.writerows(updated_rows)
+        print("🔒 Successfully secured users.csv with cryptographic password hashes.")
+
+ensure_secure_user_credentials()
 
 # ==============================================================================
 # Class & User Registry Handlers
@@ -256,7 +319,7 @@ def login_user():
     username = (request.form.get('username') or '').strip()
     user_id = (request.form.get('user_id') or '').strip()
 
-    current_users = {}
+    matched_user = None
     if os.path.exists(USERS_CSV):
         with open(USERS_CSV, 'r', encoding='utf-8') as file:
             reader = csv.reader(file)
@@ -265,16 +328,30 @@ def login_user():
                 if not row or len(row) < 2:
                     continue
                 u = row[0].strip()
-                uid = row[1].strip()
-                if u:
-                    current_users[u.lower()] = (u, uid)
+                pwd_hash = row[1].strip()
+                assigned = row[2].strip() if len(row) > 2 else 'ALL'
+                role = row[3].strip() if len(row) > 3 else 'Faculty'
 
-    if username.lower() in current_users and current_users[username.lower()][1] == user_id:
-        session['username'] = current_users[username.lower()][0]
+                if u.lower() == username.lower():
+                    # Validate hash or plaintext fallback
+                    is_valid = False
+                    if pwd_hash.startswith('scrypt:') or pwd_hash.startswith('pbkdf2:'):
+                        is_valid = check_password_hash(pwd_hash, user_id)
+                    else:
+                        is_valid = (pwd_hash == user_id)
+
+                    if is_valid:
+                        matched_user = (u, assigned, role)
+                        break
+
+    if matched_user:
+        session['username'] = matched_user[0]
+        session['role'] = matched_user[2]
+        session['is_admin'] = (matched_user[2].lower() in ['admin', 'administrator', 'principal'])
         load_known_faces()
         return redirect(url_for('home'))
     else:
-        return render_template('login.html', error="Invalid username or ID. Please try again.")
+        return render_template('login.html', error="Invalid username or password ID. Please try again.")
 
 @app.route('/logout')
 def logout():
@@ -294,13 +371,15 @@ def home():
     return render_template(
         'home.html',
         username=username,
+        role=session.get('role', 'Faculty'),
+        is_admin=session.get('is_admin', False),
         assigned_classes=assigned_classes,
         all_classes=all_classes,
         total_students=total_students
     )
 
 # ==============================================================================
-# Student Registration & Management (With Class Dropdown Selection)
+# Student Registration & Management (Role-Based Admin Protection)
 # ==============================================================================
 @app.route('/register_student', methods=['GET', 'POST'])
 def register_student():
@@ -392,6 +471,7 @@ def register_student():
         classes=classes,
         error_msg=error_msg,
         success_msg=success_msg,
+        is_admin=session.get('is_admin', False),
         total_students=len(students)
     )
 
@@ -399,6 +479,11 @@ def register_student():
 def delete_student(student_id):
     if 'username' not in session:
         return redirect(url_for('login'))
+
+    # Security: Restrict deletion strictly to Administrator roles
+    if not session.get('is_admin', False):
+        flash("Access Denied: Only Administrators are authorized to delete student profiles.", "danger")
+        return redirect(url_for('register_student'))
 
     current_students = get_registered_students_list()
     remaining_students = []
@@ -432,6 +517,7 @@ def delete_student(student_id):
                 pass
 
     load_known_faces()
+    flash("Student profile successfully deleted by Administrator.", "success")
     return redirect(url_for('register_student'))
 
 # ==============================================================================
@@ -543,167 +629,182 @@ def generate_frames(mode="yolov8_eye"):
 
     mode_label = MODE_DISPLAY_NAMES.get(mode, "Detection Active")
 
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
 
-        # Anti-Spoofing Eye Blink Detection
-        if is_eye_mode and dlib_predictor is not None:
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            faces = dlib_detector(gray)
-            for face in faces:
-                landmarks = dlib_predictor(gray, face)
-                left_eye = [(landmarks.part(i).x, landmarks.part(i).y) for i in range(36, 42)]
-                right_eye = [(landmarks.part(i).x, landmarks.part(i).y) for i in range(42, 48)]
+            # Anti-Spoofing Eye Blink Detection
+            if is_eye_mode and dlib_predictor is not None:
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                faces = dlib_detector(gray)
+                for face in faces:
+                    landmarks = dlib_predictor(gray, face)
+                    left_eye = [(landmarks.part(i).x, landmarks.part(i).y) for i in range(36, 42)]
+                    right_eye = [(landmarks.part(i).x, landmarks.part(i).y) for i in range(42, 48)]
 
-                left_ear = calculate_ear(left_eye)
-                right_ear = calculate_ear(right_eye)
-                ear = (left_ear + right_ear) / 2.0
+                    left_ear = calculate_ear(left_eye)
+                    right_ear = calculate_ear(right_eye)
+                    ear = (left_ear + right_ear) / 2.0
 
-                if ear < EAR_THRESHOLD:
-                    blink_counter += 1
-                else:
-                    if EAR_CONSECUTIVE_MIN <= blink_counter <= EAR_CONSECUTIVE_MAX and eye_was_open:
-                        current_time = datetime.now()
-                        if (current_time - last_blink_time).total_seconds() > BLINK_TIMEOUT:
-                            blink_detected = True
-                            last_blink_time = current_time
-                    blink_counter = 0
-                    eye_was_open = True
+                    if ear < EAR_THRESHOLD:
+                        blink_counter += 1
+                    else:
+                        if EAR_CONSECUTIVE_MIN <= blink_counter <= EAR_CONSECUTIVE_MAX and eye_was_open:
+                            current_time = datetime.now()
+                            if (current_time - last_blink_time).total_seconds() > BLINK_TIMEOUT:
+                                blink_detected = True
+                                last_blink_time = current_time
+                        blink_counter = 0
+                        eye_was_open = True
 
-                for (x, y) in left_eye + right_eye:
-                    cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
+                    for (x, y) in left_eye + right_eye:
+                        cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
 
-        # Hand gesture detection
-        hand_detected = False
-        if is_hand_mode and hands is not None:
-            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            hand_results = hands.process(rgb_frame)
-            if hand_results.multi_hand_landmarks:
-                for hand_landmarks in hand_results.multi_hand_landmarks:
-                    mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-                    hand_detected = True
+            # Hand gesture detection
+            hand_detected = False
+            if is_hand_mode and hands is not None:
+                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                hand_results = hands.process(rgb_frame)
+                if hand_results.multi_hand_landmarks:
+                    for hand_landmarks in hand_results.multi_hand_landmarks:
+                        mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+                        hand_detected = True
 
-        # YOLO object/face detection
-        boxes = []
-        confidences = []
-        class_ids = []
+            # YOLO object/face detection
+            boxes = []
+            confidences = []
+            class_ids = []
 
-        if selected_model is not None:
-            results = selected_model(frame, verbose=False)
-            for result in results:
-                for box in result.boxes:
-                    x1, y1, x2, y2 = map(int, box.xyxy[0])
-                    confidence = float(box.conf[0])
-                    class_id = int(box.cls[0])
+            if selected_model is not None:
+                results = selected_model(frame, verbose=False)
+                for result in results:
+                    for box in result.boxes:
+                        x1, y1, x2, y2 = map(int, box.xyxy[0])
+                        confidence = float(box.conf[0])
+                        class_id = int(box.cls[0])
 
-                    if confidence > 0.6 and class_id == 0:
-                        boxes.append([x1, y1, x2 - x1, y2 - y1])
-                        confidences.append(confidence)
-                        class_ids.append(class_id)
+                        if confidence > 0.45 and class_id == 0:
+                            boxes.append([x1, y1, x2 - x1, y2 - y1])
+                            confidences.append(confidence)
+                            class_ids.append(class_id)
 
-        indices = cv2.dnn.NMSBoxes(boxes, confidences, score_threshold=0.5, nms_threshold=0.3)
+            # Robust Fallback: If close-up face has no YOLO body detection, use frontal face detector
+            if len(boxes) == 0 and dlib_detector is not None:
+                gray_f = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                d_faces = dlib_detector(gray_f, 0)
+                for df in d_faces:
+                    fx1, fy1, fx2, fy2 = df.left(), df.top(), df.right(), df.bottom()
+                    boxes.append([fx1, fy1, fx2 - fx1, fy2 - fy1])
+                    confidences.append(0.95)
+                    class_ids.append(0)
 
-        for i in indices:
-            box = boxes[i]
-            x1, y1, w, h = box
-            x2 = x1 + w
-            y2 = y1 + h
+            indices = cv2.dnn.NMSBoxes(boxes, confidences, score_threshold=0.3, nms_threshold=0.3)
 
-            x1, y1 = max(0, x1), max(0, y1)
-            x2, y2 = min(frame.shape[1], x2), min(frame.shape[0], y2)
+            for i in indices:
+                box = boxes[i]
+                x1, y1, w, h = box
+                x2 = x1 + w
+                y2 = y1 + h
 
-            face_roi = frame[y1:y2, x1:x2]
-            if face_roi.size == 0:
-                continue
+                x1, y1 = max(0, x1), max(0, y1)
+                x2, y2 = min(frame.shape[1], x2), min(frame.shape[0], y2)
 
-            rgb_face_roi = cv2.cvtColor(face_roi, cv2.COLOR_BGR2RGB)
-            face_encodings = face_recognition.face_encodings(rgb_face_roi)
-            if not face_encodings:
-                continue
+                face_roi = frame[y1:y2, x1:x2]
+                if face_roi.size == 0 or face_roi.shape[0] < 20 or face_roi.shape[1] < 20:
+                    continue
 
-            face_names = []
-            face_ids = []
-            face_classes = []
-            for face_encoding in face_encodings:
-                if face_encodings_tree is not None:
-                    dist_val, ind = face_encodings_tree.query([face_encoding], k=1)
-                    best_match_index = ind[0][0]
-                    if dist_val[0][0] < 0.65:
-                        name = known_face_names[best_match_index]
-                        uid = known_face_ids[best_match_index]
-                        cname = known_face_classes[best_match_index] if best_match_index < len(known_face_classes) else 'N/A'
+                rgb_face_roi = cv2.cvtColor(face_roi, cv2.COLOR_BGR2RGB)
+                face_encodings = face_recognition.face_encodings(rgb_face_roi)
+                if not face_encodings:
+                    continue
+
+                face_names = []
+                face_ids = []
+                face_classes = []
+                for face_encoding in face_encodings:
+                    if face_encodings_tree is not None:
+                        dist_val, ind = face_encodings_tree.query([face_encoding], k=1)
+                        best_match_index = ind[0][0]
+                        if dist_val[0][0] < 0.65:
+                            name = known_face_names[best_match_index]
+                            uid = known_face_ids[best_match_index]
+                            cname = known_face_classes[best_match_index] if best_match_index < len(known_face_classes) else 'N/A'
+                        else:
+                            name = "Unknown"
+                            uid = "Unknown"
+                            cname = "Unknown"
                     else:
                         name = "Unknown"
                         uid = "Unknown"
                         cname = "Unknown"
+
+                    face_names.append(name)
+                    face_ids.append(uid)
+                    face_classes.append(cname)
+
+                # Liveness evaluation
+                is_liveness_verified = False
+                if is_eye_mode:
+                    is_liveness_verified = blink_detected
+                elif is_hand_mode:
+                    is_liveness_verified = hand_detected
                 else:
-                    name = "Unknown"
-                    uid = "Unknown"
-                    cname = "Unknown"
+                    is_liveness_verified = True
 
-                face_names.append(name)
-                face_ids.append(uid)
-                face_classes.append(cname)
+                # Anti-Spoofing & Duplicate Lockout
+                if face_names and is_liveness_verified:
+                    student_name = face_names[0]
+                    student_id = face_ids[0]
+                    student_class = face_classes[0] if face_classes[0] != 'Unknown' else session.get('active_class', 'N/A')
+                    label = f"{student_name} ({student_id})"
 
-            # Liveness evaluation
-            is_liveness_verified = False
-            if is_eye_mode:
-                is_liveness_verified = blink_detected
-            elif is_hand_mode:
-                is_liveness_verified = hand_detected
-            else:
-                is_liveness_verified = True
+                    if student_name != "Unknown" and student_id not in recorded_ids and student_name not in recorded_names:
+                        timestamp_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        attendance_data.append({
+                            'Name': student_name,
+                            'ID': student_id,
+                            'Class': student_class,
+                            'Time': timestamp_now,
+                            'Verification_Mode': mode_label
+                        })
+                        recorded_names.add(student_name)
+                        recorded_ids.add(student_id)
+                        if is_eye_mode:
+                            blink_detected = False
+                else:
+                    label = face_names[0] if face_names else "Unknown"
 
-            # Anti-Spoofing & Duplicate Lockout
-            if face_names and is_liveness_verified:
-                student_name = face_names[0]
-                student_id = face_ids[0]
-                student_class = face_classes[0] if face_classes[0] != 'Unknown' else session.get('active_class', 'N/A')
-                label = f"{student_name} ({student_id})"
+                is_known = (face_names and face_names[0] != "Unknown")
+                is_already_marked = (face_ids and face_ids[0] in recorded_ids)
 
-                if student_name != "Unknown" and student_id not in recorded_ids and student_name not in recorded_names:
-                    timestamp_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    attendance_data.append({
-                        'Name': student_name,
-                        'ID': student_id,
-                        'Class': student_class,
-                        'Time': timestamp_now,
-                        'Verification_Mode': mode_label
-                    })
-                    recorded_names.add(student_name)
-                    recorded_ids.add(student_id)
-                    if is_eye_mode:
-                        blink_detected = False
-            else:
-                label = face_names[0] if face_names else "Unknown"
+                if is_already_marked:
+                    color = (255, 191, 0)
+                    label += " [PRESENT]"
+                elif is_known and is_liveness_verified:
+                    color = (0, 255, 0)
+                    label += " [LIVENESS VERIFIED]"
+                elif is_known and not is_liveness_verified:
+                    color = (0, 165, 255)
+                    label += " [BLINK / GESTURE REQUIRED]"
+                else:
+                    color = (0, 0, 255)
 
-            is_known = (face_names and face_names[0] != "Unknown")
-            is_already_marked = (face_ids and face_ids[0] in recorded_ids)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+                cv2.putText(frame, label, (x1, max(15, y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 2)
 
-            if is_already_marked:
-                color = (255, 191, 0)
-                label += " [PRESENT]"
-            elif is_known:
-                color = (0, 255, 0)
-            else:
-                color = (0, 165, 255)
+            # Mode banner overlay on video
+            cv2.putText(frame, f"Engine: {mode_label}", (20, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
-            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-            cv2.putText(frame, label, (x1, max(15, y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
-
-        # Mode banner overlay on video
-        cv2.putText(frame, f"Engine: {mode_label}", (20, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
-
-        ret, buffer = cv2.imencode('.jpg', frame)
-        frame_bytes = buffer.tobytes()
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-
-    cap.release()
-    if hands is not None:
-        hands.close()
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame_bytes = buffer.tobytes()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+    finally:
+        cap.release()
+        if hands is not None:
+            hands.close()
 
 @app.route('/video_feed')
 def video_feed():
@@ -713,8 +814,23 @@ def video_feed():
     return Response(generate_frames(mode), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 # ==============================================================================
-# Save & View Attendance Records with Class Filtering
+# Save & View Attendance Records with Cross-Instructor Substitute Discovery
 # ==============================================================================
+def find_attendance_files(class_name, date):
+    """Finds all CSV attendance files across both regular and substitute instructor folders."""
+    found = []
+    base_att_dir = os.path.join(BASE_DIR, "attendance")
+    if not os.path.exists(base_att_dir):
+        return found
+
+    for instructor in os.listdir(base_att_dir):
+        folder = os.path.join(base_att_dir, instructor, class_name, date)
+        if os.path.exists(folder):
+            for f in os.listdir(folder):
+                if f.endswith('.csv'):
+                    found.append((f, os.path.join(folder, f), instructor))
+    return found
+
 @app.route('/save_attendance')
 def save_attendance():
     if 'username' not in session:
@@ -758,11 +874,9 @@ def see_attendance():
         date_raw = request.form.get('date', '').strip()
         date = date_raw.replace('-', '')
         
-        # Check both the current teacher's folder and all teacher folders (in case substitute took it)
-        attendance_folder = os.path.join(BASE_DIR, f"attendance/{teacher_name}/{class_name}/{date}")
-        csv_files = []
-        if os.path.exists(attendance_folder):
-            csv_files = [f for f in os.listdir(attendance_folder) if f.endswith('.csv')]
+        # Discover all session files across regular and substitute teachers
+        files_info = find_attendance_files(class_name, date)
+        csv_files = [item[0] for item in files_info]
         
         return render_template(
             'see_attendance.html',
@@ -792,25 +906,28 @@ def view_attendance():
     csv_file = request.form.get('csv_file', '').strip()
 
     attendance_records = []
-    attendance_folder = os.path.join(BASE_DIR, f"attendance/{teacher_name}/{class_name}/{date}")
-    csv_files = []
-    if os.path.exists(attendance_folder):
-        csv_files = [f for f in os.listdir(attendance_folder) if f.endswith('.csv')]
+    files_info = find_attendance_files(class_name, date)
+    csv_files = [item[0] for item in files_info]
+
+    # Find the target file across teacher directories
+    target_path = None
+    for fname, fpath, instructor in files_info:
+        if fname == csv_file:
+            target_path = fpath
+            break
 
     present_ids = set()
-    if csv_file:
-        file_path = os.path.join(attendance_folder, csv_file)
-        if os.path.exists(file_path):
-            with open(file_path, 'r', encoding='utf-8') as csvfile:
-                reader = csv.DictReader(csvfile)
-                for row in reader:
-                    if 'Verification_Mode' not in row or not row['Verification_Mode']:
-                        row['Verification_Mode'] = 'Standard Verified'
-                    if 'Class' not in row or not row['Class']:
-                        row['Class'] = class_name
-                    attendance_records.append(row)
-                    if row.get('ID'):
-                        present_ids.add(row['ID'].strip())
+    if target_path and os.path.exists(target_path):
+        with open(target_path, 'r', encoding='utf-8') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                if 'Verification_Mode' not in row or not row['Verification_Mode']:
+                    row['Verification_Mode'] = 'Standard Verified'
+                if 'Class' not in row or not row['Class']:
+                    row['Class'] = class_name
+                attendance_records.append(row)
+                if row.get('ID'):
+                    present_ids.add(row['ID'].strip())
 
     # Get registered students belonging to this class (or all registered if no specific class match)
     class_students = get_registered_students_list(class_filter=class_name)

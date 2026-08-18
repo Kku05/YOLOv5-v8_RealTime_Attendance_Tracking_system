@@ -5,55 +5,62 @@
 [![YOLOv8](https://img.shields.io/badge/YOLO-v5%20%2F%20v8-orange.svg)](https://docs.ultralytics.com/)
 [![Dlib](https://img.shields.io/badge/dlib-20.0.1-red.svg)](http://dlib.net/)
 [![macOS Apple Silicon](https://img.shields.io/badge/macOS-Apple%20Silicon%20%2F%20Metal-black.svg)](https://apple.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**RATS** is an automated computer vision web application designed for smart attendance tracking. It uses **Ultralytics YOLO (v5 & v8)** for face detection, **Dlib & face_recognition** for 128-dimensional biometric matching via KD-Tree, and **Liveness Verification (Eye Blink EAR & MediaPipe Hand Gestures)** to prevent spoofing and proxy attendance.
+**RATS** is an enterprise-grade automated computer vision platform designed for smart classroom attendance tracking. It uses **Ultralytics YOLO (v8 & v5)** for person and face detection, **Dlib & face_recognition** for 128-dimensional biometric matching via KD-Tree, and **Dual Anti-Spoofing Verification (Eye Blink EAR & MediaPipe 3D Hand Gestures)** to prevent photo and proxy attendance.
 
 ---
 
 ## 🌟 Key Features
 
-* **Real-time Face Detection**: High-speed detection using YOLOv8 & YOLOv5.
-* **Biometric Face Recognition**: 128-d facial embeddings with KD-Tree sub-millisecond nearest neighbor search.
-* **Anti-Spoofing & Liveness**:
-  * **Eye Blink Verification**: Dlib 68 facial landmarks measuring Eye Aspect Ratio (EAR).
-  * **Hand Gesture Verification**: MediaPipe Hands detecting raised hand participation.
-* **Interactive Teacher Dashboard**:
-  * Teacher authentication ([users.csv](users.csv)).
-  * Live camera stream with bounding box and student ID annotations.
-  * Real-time attendance logging.
-  * Historical attendance log viewer and filter by class and date.
-* **Apple Silicon & Cross-Platform Support**: Optimized for macOS (M1/M2/M3/M4/M5 Metal MPS acceleration) and Linux/Windows.
+* **Unified Enterprise Web App (`app.py`)**: All 6 AI detection engines dynamically switchable inside a single web interface.
+* **Biometric Face Recognition**: 128-D facial embeddings with KD-Tree spatial sub-millisecond nearest neighbor matching.
+* **Dual Anti-Spoofing & Liveness**:
+  * **Eye Blink Verification**: Dlib 68 facial landmarks measuring Eye Aspect Ratio (EAR < 0.28).
+  * **Hand Gesture Verification**: MediaPipe Hands tracking 21 3D skeleton joints.
+* **Student Face & Profile Registry**:
+  * Enroll students using live webcam snapshots or image uploads with real-time face embedding validation.
+  * Role-based deletion protection (Admin only).
+* **Institutional Academic Catalog & Substitute Support**:
+  * Central class catalog (`classes.csv`) and teacher assignments (`users.csv`).
+  * Automatic `[Substitute Session]` audit tagging when covering for colleagues.
+  * Cross-instructor attendance log discovery and PDF/CSV reporting.
+* **Security Hardening**:
+  * Salted cryptographic password hashes (`werkzeug.security` scrypt).
+  * Persistent 32-byte session secret token.
 
 ---
 
 ## 📁 Repository Structure
 
 ```
-├── run_mac.sh              # macOS Interactive Launcher Script
-│
-├── Yolov8Eye.py            # Main App: YOLOv8 + Eye Blink Liveness Attendance (Port 5003)
-├── Yolov8Hand.py           # Main App: YOLOv8 + MediaPipe Hand Gesture Attendance (Port 5002)
-├── Yolov8Login.py          # Main App: YOLOv8 Face Recognition Attendance (Port 5004)
-├── Yolov5Eye.py            # YOLOv5 + Eye Blink Attendance (Port 5001)
-├── Yolov5Hand.py           # YOLOv5 + MediaPipe Hand Gesture Attendance (Port 5005)
-├── Yolov5Login.py          # YOLOv5 Face Recognition Attendance (Port 5006)
+├── app.py                      # Unified Enterprise Web Application [Port 5001]
+├── run_mac.sh                  # macOS Interactive Terminal Launcher
 │
 ├── shape_predictor_68_face_landmarks.dat  # Dlib 68-point landmark model (~99MB)
 │
-├── yolov8/                 # YOLOv8 Weights (yolov8n.pt, yolov8l.pt)
-├── yolov5/                 # YOLOv5 Weights (yolov5s.pt, yolov5su.pt)
+├── yolov8/                     # Pretrained YOLOv8 Weights (yolov8n.pt, yolov8l.pt)
+├── yolov5/                     # Pretrained YOLOv5 Weights (yolov5s.pt, yolov5su.pt)
 │
-├── users.csv               # Teacher login credentials
-├── known_faces.csv         # Enrolled student database index
-├── photos/                 # Enrolled student facial images
-├── attendance/             # Generated daily attendance records
+├── classes.csv                 # Institutional class catalog
+├── users.csv                   # User database (salted scrypt hashes & roles)
+├── known_faces.csv             # Enrolled student database index
+├── photos/                     # Enrolled student portrait images gallery
+├── attendance/                 # Generated session logs (attendance/<instructor>/<class>/<date>/)
 │
-├── templates/              # Flask Jinja2 HTML templates
-├── static/                 # UI assets and illustrations
+├── templates/                  # Jinja2 HTML templates
+│   ├── login.html              # Secure instructor/admin login
+│   ├── home.html               # Teacher dashboard with assigned class pills
+│   ├── register_student.html   # Student webcam enrollment & directory management
+│   ├── take_attendance.html    # Live multi-model AI camera stream & real-time attendance feed
+│   └── see_attendance.html     # Historical attendance analytics & substitute discovery
 │
-├── requirements.txt        # Python package dependencies
+├── static/                     # UI assets and illustrations
+├── legacy/                     # Standalone legacy scripts
+│
+├── requirements.txt            # Python package dependencies
 ├── MAC_SETUP_AND_REQUIREMENTS.md # Detailed Mac setup and troubleshooting guide
-└── PROJECT_OVERVIEW.md     # Detailed architecture and workflow document
+└── PROJECT_OVERVIEW.md         # Detailed architecture and workflow document
 ```
 
 ---
@@ -67,59 +74,33 @@ brew install cmake pkg-config python@3.11 libpng libjpeg openblas
 
 ### 2. Setup Virtual Environment
 ```bash
-# Clone the repository
-git clone https://github.com/Kku05/YOLOv5-v8_RealTime_Attendance_Tracking_system.git
-cd YOLOv5-v8_RealTime_Attendance_Tracking_system
-
-# Create and activate virtual environment
-python3.11 -m venv venv
+# 1. Activate virtual environment
 source venv/bin/activate
 
-# Install requirements
+# 2. Install dependencies
 pip install -r requirements.txt
 ```
 
 ### 3. Run the Application
+```bash
+python app.py
+```
+> Open your browser at: **[http://127.0.0.1:5001](http://127.0.0.1:5001)**
 
-#### Option A: macOS Launcher Script (Easiest)
+Or use the interactive terminal launcher:
 ```bash
 ./run_mac.sh
 ```
-
-#### Option B: Run Specific Mode Directly
-* **Eye Blink Detection Mode (Recommended)**:
-  ```bash
-  python Yolov8Eye.py
-  ```
-  *Open browser at `http://127.0.0.1:5003`*
-
-* **Hand Gesture Mode**:
-  ```bash
-  python Yolov8Hand.py
-  ```
-  *Open browser at `http://127.0.0.1:5002`*
-
-* **Face Recognition Login Mode**:
-  ```bash
-  python Yolov8Login.py
-  ```
-  *Open browser at `http://127.0.0.1:5004`*
-
-* **YOLOv5 Modes**:
-  * `python Yolov5Eye.py` (Port 5001)
-  * `python Yolov5Hand.py` (Port 5005)
-  * `python Yolov5Login.py` (Port 5006)
 
 ---
 
 ## 🔑 Default Login Credentials
 
-| Username | User ID |
-| :--- | :--- |
-| `tirth` | `AB1234CD` |
-| `vishal` | `XY5678EF` |
-| `ayush` | `GH9012IJ` |
-| `deepak sir` | `1234QWER` |
+| Username | Password / Security ID | Assigned Role | Assigned Classes |
+| :--- | :--- | :--- | :--- |
+| **`admin`** | **`admin123`** | **Administrator** | `ALL` *(Full system access & student profile deletion)* |
+| **`tirth`** | **`AB1234CD`** | **Lead Instructor** | `CSE-AIML`, `CSE-4A` *(Assigned + Substitute access)* |
+| **`teacher`** | **`1234`** | **Faculty** | `IT-A`, `Grade-11` *(Assigned + Substitute access)* |
 
 ---
 
@@ -127,3 +108,9 @@ pip install -r requirements.txt
 
 * [Mac Setup & Requirements Guide](MAC_SETUP_AND_REQUIREMENTS.md)
 * [Comprehensive Project Overview](PROJECT_OVERVIEW.md)
+
+---
+
+## 📜 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.

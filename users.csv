@@ -1,4 +1,4 @@
-username,user_id,assigned_classes,role
-admin,admin123,ALL,Administrator
-tirth,AB1234CD,CSE-AIML;CSE-4A,Lead Instructor
-teacher,1234,IT-A;Grade-11,Faculty
+username,password_hash,assigned_classes,role
+admin,scrypt:32768:8:1$kPE73vVETlCuEk0p$2dc8e29338b42778ebd41fc24b8a855a4d26cb1cb71c9cfd2c80523620a0c61225ac3b8b5d9be69a7ec3fd362d96abdfaca04046ef951b1b810a09171179c459,ALL,Administrator
+tirth,scrypt:32768:8:1$Y8MYRzmLPNTRznVI$8b6bd3f06c6096210c4c8c9ab1ca21e5030386ff3dc0695b56843e5bbcb0ca7bf5b51f55b6706eebc1889c81b371ed57e41918ccdfcadfc9288d6ea8f9bbd1bb,CSE-AIML;CSE-4A,Lead Instructor
+teacher,scrypt:32768:8:1$70DAhDcCM86rE8eW$d88196aa62b9ad3c806099ccea04bc5958769d3a40315d12f4e18d4ef621087c01770f41d0b5c487574af3d177af7640fb27a8c91906d0c17ea23683649a0144,IT-A;Grade-11,Faculty

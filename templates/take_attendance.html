@@ -191,7 +191,6 @@
             color: #bbdefb;
         }
 
-        /* Floating background shapes */
         .background-animation {
             position: fixed;
             top: 0;
@@ -200,11 +199,12 @@
             height: 100%;
             z-index: -1;
             overflow: hidden;
+            pointer-events: none;
         }
 
         .shape {
             position: absolute;
-            background: rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 50%;
             animation: float 14s infinite ease-in-out;
         }
@@ -466,8 +466,8 @@
                 .catch(err => console.error("Error fetching live attendance:", err));
         }
 
-        // Poll every 3 seconds for live table updates
-        setInterval(updateAttendanceFeed, 3000);
+        // Poll every 1 second for instant live table updates
+        setInterval(updateAttendanceFeed, 1000);
         updateAttendanceFeed();
     </script>
     {% endif %}

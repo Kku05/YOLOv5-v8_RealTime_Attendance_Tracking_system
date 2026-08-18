@@ -1,177 +1,51 @@
-================================================================================
-           RATS (REAL-TIME ATTENDANCE TRACKING SYSTEM) - MAC SETUP & REQUIREMENTS
-================================================================================
-Last Updated: August 2026
-Platform: macOS (Apple Silicon M1/M2/M3/M4/M5 and Intel)
-Python Version: Python 3.11 (Recommended)
+==============================================================================
+RATS: MAC SETUP & REQUIREMENTS GUIDE
+==============================================================================
 
---------------------------------------------------------------------------------
-1. OVERVIEW & WHAT HAPPENED MOVING FROM WINDOWS TO MAC
---------------------------------------------------------------------------------
-When moving a machine learning computer vision project from Windows to macOS:
+Platform: macOS (Apple Silicon M1/M2/M3/M4/M5 and Intel x86_64)
+Python Version: Python 3.11
 
-1. Old Windows Virtual Environment ('rats'):
-   - Virtual environments contain hardcoded binary executables (.exe, .ps1) and
-     OS-specific symlinks. They cannot be transferred across operating systems.
-   - Fix: The old 'rats' folder is replaced with a fresh native macOS venv.
+1. SYSTEM-LEVEL PREREQUISITES
+------------------------------------------------------------------------------
+Ensure Homebrew is installed:
+    export PATH="/opt/homebrew/bin:$PATH"
+    brew install cmake pkg-config python@3.11 libpng libjpeg openblas
 
-2. Windows Wheel Files ('*.win_amd64.whl'):
-   - Windows binary wheels (e.g., dlib-*-win_amd64.whl) cannot be installed on Mac.
-   - Fix: On Apple Silicon Mac (ARM64), dlib must be compiled natively using CMake.
+2. PYTHON PACKAGES (requirements.txt)
+------------------------------------------------------------------------------
+- Flask
+- opencv-python
+- ultralytics
+- dlib
+- face-recognition
+- numpy
+- scikit-learn
+- scipy
+- mediapipe==0.10.14
+- setuptools<80
 
-3. Dlib & CMake Compilation on Apple Silicon:
-   - Compiling dlib on modern macOS requires CMake and OpenBLAS / LibPNG.
-   - We installed Homebrew build dependencies and compiled dlib natively (v20.0.1).
+3. ACTIVATION & EXECUTION
+------------------------------------------------------------------------------
+1. Open Terminal:
+    cd "/Users/tirth/Downloads/my project/YOLOv5-v8_RealTime_Attendance_Tracking_system"
 
-4. Python Version Selection:
-   - Python 3.11 was selected because packages like dlib, mediapipe, and
-     face-recognition have stable Apple Silicon support on 3.11.
+2. Activate virtual environment:
+    source venv/bin/activate
 
-5. Mac Built-in FaceTime Camera Index:
-   - On Windows, cameras are often index 0 or 1.
-   - On macOS, the built-in FaceTime HD camera is ALWAYS index 0:
-     cap = cv2.VideoCapture(0)
+3. Start unified application:
+    python app.py
 
-6. macOS Port 5000 Conflict (AirPlay Receiver):
-   - macOS Monterey / Ventura / Sonoma / Sequoia use port 5000 for AirPlay Receiver.
-   - Fix: All 6 project entry points are configured with unique dedicated ports (5001-5006)
-     with dynamic PORT environment variable overrides.
+4. Open in browser:
+    http://127.0.0.1:5001
 
-7. Cross-Platform Relative Path Resolution:
-   - All scripts now use BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-     to ensure models, landmarks, and CSVs load reliably from any working folder.
+4. USER LOGINS & ROLES
+------------------------------------------------------------------------------
+- admin   | admin123 | Administrator   | ALL
+- tirth   | AB1234CD | Lead Instructor | CSE-AIML, CSE-4A
+- teacher | 1234     | Faculty         | IT-A, Grade-11
 
---------------------------------------------------------------------------------
-2. SYSTEM-LEVEL PREREQUISITES (ONE-TIME SETUP)
---------------------------------------------------------------------------------
-If you are setting up on a new Mac or reinstalling:
-
-Step 1: Install Homebrew (if not installed)
-   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-Step 2: Install Build Tools and Python 3.11 via Homebrew
-   export PATH="/opt/homebrew/bin:$PATH"
-   brew install cmake pkg-config python@3.11 libpng libjpeg openblas
-
---------------------------------------------------------------------------------
-3. PYTHON LIBRARIES & PURPOSE
---------------------------------------------------------------------------------
-The project uses the following key libraries:
-
-1. Flask (3.1.3):
-   Web framework serving the web interface, live video streaming, authentication,
-   and attendance reporting routes.
-
-2. OpenCV (opencv-python 5.0.0):
-   Captures live video frames from your webcam, converts color spaces (BGR to RGB/GRAY),
-   draws bounding boxes and landmarks, and encodes frames to JPEG for browser streaming.
-
-3. Ultralytics YOLO (8.4.118):
-   Deep learning object and face detector (YOLOv5 and YOLOv8 models) accelerated by
-   Apple Silicon GPU Metal Performance Shaders (MPS).
-
-4. Dlib (20.0.1):
-   C++ machine learning library used for 68-point facial landmark predictor
-   (shape_predictor_68_face_landmarks.dat) to compute Eye Aspect Ratio (EAR) for blink detection.
-
-5. face-recognition (1.3.0) & face-recognition-models:
-   Extracts 128-dimensional face embedding vectors from facial images.
-
-6. scikit-learn (1.9.0):
-   Uses KDTree (k-dimensional tree) for instant nearest-neighbor matching of detected
-   faces against enrolled faces in known_faces.csv.
-
-7. SciPy (1.17.1):
-   Computes Euclidean distances between eye coordinates for blink calculation.
-
-8. MediaPipe (mediapipe 0.10.14):
-   Google's real-time hand tracking framework used for hand gesture detection.
-
-9. setuptools (<80):
-   Ensures backward-compatible resource loading for face_recognition_models.
-
---------------------------------------------------------------------------------
-4. HOW TO SET UP THE VIRTUAL ENVIRONMENT (STEP-BY-STEP)
---------------------------------------------------------------------------------
-Open Terminal on your Mac and run:
-
-# 1. Navigate to the project directory
-cd "/Users/tirth/Downloads/my project/YOLOv5-v8_RealTime_Attendance_Tracking_system"
-
-# 2. Ensure Homebrew is in your path
-export PATH="/opt/homebrew/bin:$PATH"
-
-# 3. Create virtual environment using Python 3.11 (if creating from scratch)
-/opt/homebrew/opt/python@3.11/bin/python3.11 -m venv venv
-
-# 4. Activate the virtual environment
-source venv/bin/activate
-
-# 5. Install all requirements
-pip install -r requirements.txt
-
---------------------------------------------------------------------------------
-5. HOW TO RUN THE DIFFERENT MODES
---------------------------------------------------------------------------------
-Always make sure your virtual environment is active first:
-cd "/Users/tirth/Downloads/my project/YOLOv5-v8_RealTime_Attendance_Tracking_system"
-source venv/bin/activate
-
-Option A: Interactive macOS Launcher (Recommended)
-   ./run_mac.sh
-
-Option B: Run a specific Python script:
-
-MODE 1: YOLOv8 + EYE BLINK ATTENDANCE (PORT 5003) [Recommended]
-   python Yolov8Eye.py
-   Browser: http://127.0.0.1:5003
-
-MODE 2: YOLOv8 + HAND GESTURE ATTENDANCE (PORT 5002)
-   python Yolov8Hand.py
-   Browser: http://127.0.0.1:5002
-
-MODE 3: YOLOv8 STANDARD LOGIN ATTENDANCE (PORT 5004)
-   python Yolov8Login.py
-   Browser: http://127.0.0.1:5004
-
-MODE 4: YOLOv5 + EYE BLINK ATTENDANCE (PORT 5001)
-   python Yolov5Eye.py
-   Browser: http://127.0.0.1:5001
-
-MODE 5: YOLOv5 + HAND GESTURE ATTENDANCE (PORT 5005)
-   python Yolov5Hand.py
-   Browser: http://127.0.0.1:5005
-
-MODE 6: YOLOv5 STANDARD LOGIN ATTENDANCE (PORT 5006)
-   python Yolov5Login.py
-   Browser: http://127.0.0.1:5006
-
---------------------------------------------------------------------------------
-6. LOGIN CREDENTIALS (FROM users.csv)
---------------------------------------------------------------------------------
-You can log into the web portal with any of the following accounts:
-
-Username:    User ID:
-tirth        AB1234CD
-vishal       XY5678EF
-ayush        GH9012IJ
-deepak sir   1234QWER
-
---------------------------------------------------------------------------------
-7. MAC TROUBLESHOOTING & TIPS
---------------------------------------------------------------------------------
-Q1: The camera screen is black or doesn't open.
-A1: macOS requires camera permissions.
-    Go to: Apple Menu > System Settings > Privacy & Security > Camera.
-    Make sure your Terminal (or VS Code / Antigravity IDE) toggle is turned ON.
-
-Q2: Port conflict error.
-A2: Each script is bound to its own port (5001 - 5006). You can also run with any custom port:
-    PORT=8080 python Yolov8Eye.py
-
-Q3: How to add a new person's face?
-A3: 1. Place their clear photo inside the 'photos/' folder (e.g. photos/john.jpg).
-    2. Add an entry to 'known_faces.csv':
-       photos/john.jpg,John Doe,1001
-    3. Restart your Python script. The KDTree will automatically load the new face!
-================================================================================
+5. TROUBLESHOOTING
+------------------------------------------------------------------------------
+- Camera permission: System Settings > Privacy & Security > Camera
+- Port 5000: Default port is 5001 to prevent AirPlay Receiver conflicts.
+==============================================================================

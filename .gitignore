@@ -3,6 +3,7 @@ venv/
 rats/
 env/
 .env
+.secret_key
 
 # Python cache & bytecode
 __pycache__/
